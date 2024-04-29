@@ -2,5 +2,3 @@
 zig-out/
 zig-cache/
 tokens/
-softhsm.conf
-libsofthsm2.so
