@@ -1,12 +1,12 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const config = @import("config");
 const C = @cImport({
     @cInclude("cryptoki.h");
 });
 
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
-const ArrayList = std.ArrayList;
 const print = std.debug.print;
 
 pub const PKCS11Token = struct {
@@ -367,18 +367,18 @@ fn decodeRv(rv: c_ulong) ReturnValue {
 }
 
 test "it can load a PKCS#11 library." {
-    _ = try PKCS11Token.init("/lib64/softhsm/libsofthsm.so");
+    _ = try PKCS11Token.init(config.module);
 }
 
 test "it can initialize and finalize the token." {
-    var token = try PKCS11Token.init("/lib64/softhsm/libsofthsm.so");
+    var token = try PKCS11Token.init(config.module);
 
     try token.initialize();
     try token.finalize();
 }
 
 test "it can get a slot list." {
-    var token = try PKCS11Token.init("/lib64/softhsm/libsofthsm.so");
+    var token = try PKCS11Token.init(config.module);
 
     try token.initialize();
 

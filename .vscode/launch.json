@@ -5,10 +5,9 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug test",
-            "program": "${workspaceFolder}/zig-out/bin/${fileBasenameNoExtension}-test",
+            "program": "${workspaceFolder}/zig-out/bin/p11-tests",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "preLaunchTask": "test",
         }
     ]
 }
