@@ -5,9 +5,23 @@ const C = @cImport({
     @cInclude("cryptoki.h");
 });
 
-const testing = std.testing;
 const Allocator = std.mem.Allocator;
+const mem = std.mem;
 const print = std.debug.print;
+const testing = std.testing;
+
+pub const Version = struct {
+    major: u8,
+    minor: u8,
+};
+
+pub const SlotInfo = struct {
+    description: [64]u8,
+    manufacturer_id: [32]u8,
+    flags: usize,
+    hardware_version: Version,
+    firmware_version: Version,
+};
 
 pub const PKCS11Token = struct {
     funcs: *C.CK_FUNCTION_LIST,
@@ -18,13 +32,13 @@ pub const PKCS11Token = struct {
         var module = try std.DynLib.open(path);
         defer module.close();
 
-        var p11funcs: C.CK_FUNCTION_LIST_PTR = undefined;
+        var func_list: C.CK_FUNCTION_LIST_PTR = undefined;
         const getFunctionList = module.lookup(C.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
-        const rv = getFunctionList(&p11funcs);
+        const rv = getFunctionList(&func_list);
 
         try returnIfError(rv);
 
-        return .{ .funcs = p11funcs };
+        return .{ .funcs = func_list };
     }
 
     /// Initializes the PKCS#11 module.
@@ -43,18 +57,40 @@ pub const PKCS11Token = struct {
 
     /// Caller must free returned memory.
     /// Retrieves a slot list.
-    pub fn getSlotList(self: *const PKCS11Token, allocator: *const Allocator, tokenPresent: bool) Error![]usize {
-        const present: C.CK_BBOOL = if (tokenPresent) C.CK_TRUE else C.CK_FALSE;
-        var slotCount: C.CK_ULONG = undefined;
+    pub fn getSlotList(self: *const PKCS11Token, allocator: *const Allocator, token_present: bool) Error![]usize {
+        const present: C.CK_BBOOL = if (token_present) C.CK_TRUE else C.CK_FALSE;
+        var slot_count: C.CK_ULONG = undefined;
 
-        var rv = self.funcs.C_GetSlotList.?(present, null, &slotCount);
+        var rv = self.funcs.C_GetSlotList.?(present, null, &slot_count);
         try returnIfError(rv);
 
-        const slotList = try allocator.alloc(C.CK_ULONG, slotCount);
-        rv = self.funcs.C_GetSlotList.?(present, slotList.ptr, &slotCount);
+        const slot_list = try allocator.alloc(C.CK_ULONG, slot_count);
+        rv = self.funcs.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
         try returnIfError(rv);
 
-        return slotList;
+        return slot_list;
+    }
+
+    /// Caller must free returned memory.
+    /// Retrieves information about the given slot.
+    pub fn getSlotInfo(self: *const PKCS11Token, allocator: *const Allocator, slot_id: usize) Error!*SlotInfo {
+        var c_slot_info: C.CK_SLOT_INFO = undefined;
+        const rv = self.funcs.C_GetSlotInfo.?(slot_id, &c_slot_info);
+        try returnIfError(rv);
+
+        const slot_info = try allocator.create(SlotInfo);
+        slot_info.description = c_slot_info.slotDescription;
+        slot_info.manufacturer_id = c_slot_info.manufacturerID;
+        slot_info.flags = c_slot_info.flags;
+        slot_info.hardware_version = Version{
+            .major = c_slot_info.hardwareVersion.major,
+            .minor = c_slot_info.hardwareVersion.minor,
+        };
+        slot_info.firmware_version = Version{
+            .major = c_slot_info.firmwareVersion.major,
+            .minor = c_slot_info.firmwareVersion.minor,
+        };
+        return slot_info;
     }
 
     pub const Error = error{
@@ -377,7 +413,7 @@ test "it can initialize and finalize the token." {
     try token.finalize();
 }
 
-test "it can get a slot list." {
+test "it can get a slot list and slot info" {
     var token = try PKCS11Token.init(config.module);
 
     try token.initialize();
@@ -387,4 +423,15 @@ test "it can get a slot list." {
     defer allocator.free(slots);
 
     try testing.expect(slots.len > 0);
+
+    const slot_info = try token.getSlotInfo(allocator, slots[0]);
+    defer allocator.destroy(slot_info);
+
+    std.debug.print("\nSlot Description: {s}, Hardware Version: {d}.{d}, Firmware Version: {d}.{d}\n", .{
+        slot_info.description,
+        slot_info.hardware_version.major,
+        slot_info.hardware_version.minor,
+        slot_info.firmware_version.major,
+        slot_info.firmware_version.minor,
+    });
 }
