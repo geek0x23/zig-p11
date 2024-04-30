@@ -1,19 +1,13 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const log = std.log.scoped(.p11);
+const C = @cImport({
+    @cInclude("cryptoki.h");
+});
+
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const print = std.debug.print;
-
-// I like seeing logs in tests, shoot me.
-pub const std_options = .{
-    .log_level = if (builtin.is_test) std.log.Level.debug else std.log.Level.warn,
-};
-
-const C = @cImport({
-    @cInclude("cryptoki.h");
-});
 
 pub const PKCS11Token = struct {
     funcs: *C.CK_FUNCTION_LIST,
@@ -21,7 +15,6 @@ pub const PKCS11Token = struct {
 
     /// Opens the given PKCS#11 library and loads symbols from it.
     pub fn init(path: []const u8) !PKCS11Token {
-        log.warn("Loading PKCS#11 library from path: {s}", .{path});
         var module = try std.DynLib.open(path);
         defer module.close();
 
@@ -387,7 +380,7 @@ test "it can initialize and finalize the token." {
 test "it can get a slot list." {
     var token = try PKCS11Token.init("/lib64/softhsm/libsofthsm.so");
 
-    token.initialize() catch {};
+    try token.initialize();
 
     const allocator = &testing.allocator;
     const slots = try token.getSlotList(allocator, false);
