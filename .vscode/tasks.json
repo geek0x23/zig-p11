@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "test",
+            "type": "shell",
+            "command": "zig",
+            "args": [
+                "test",
+                "-I${workspaceFolder}/include",
+                "-lc",
+                "-femit-bin=zig-out/bin/${fileBasenameNoExtension}-test",
+                "--test-no-exec",
+                "${relativeFile}",
+            ]
+        }
+    ]
+}
