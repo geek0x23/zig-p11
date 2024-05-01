@@ -6,6 +6,7 @@ const C = @cImport({
 });
 
 const Allocator = std.mem.Allocator;
+const alloc = std.heap.c_allocator;
 const mem = std.mem;
 const print = std.debug.print;
 const testing = std.testing;
@@ -24,48 +25,51 @@ pub const SlotInfo = struct {
 };
 
 pub const PKCS11Token = struct {
-    funcs: *C.CK_FUNCTION_LIST,
-    mutex: std.Thread.Mutex = std.Thread.Mutex{},
+    ctx: *C.CK_FUNCTION_LIST_PTR,
 
+    /// Caller must deinit() to free internally-allocated memory.
     /// Opens the given PKCS#11 library and loads symbols from it.
     pub fn init(path: []const u8) !PKCS11Token {
         var module = try std.DynLib.open(path);
         defer module.close();
 
-        var func_list: C.CK_FUNCTION_LIST_PTR = undefined;
+        const func_list: *C.CK_FUNCTION_LIST_PTR = try alloc.create(C.CK_FUNCTION_LIST_PTR);
         const getFunctionList = module.lookup(C.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
-        const rv = getFunctionList(&func_list);
-
+        const rv = getFunctionList(@ptrCast(func_list));
         try returnIfError(rv);
 
-        return .{ .funcs = func_list };
+        return .{ .ctx = func_list };
+    }
+
+    pub fn deinit(self: *PKCS11Token) void {
+        alloc.destroy(self.ctx);
     }
 
     /// Initializes the PKCS#11 module.
-    pub fn initialize(self: *PKCS11Token) Error!void {
+    pub fn initialize(self: PKCS11Token) Error!void {
         var args: C.CK_C_INITIALIZE_ARGS = .{ .flags = C.CKF_OS_LOCKING_OK };
-        const rv = self.funcs.C_Initialize.?(&args);
+        const rv = self.ctx.*.*.C_Initialize.?(&args);
         try returnIfError(rv);
     }
 
     /// Finalizes the PKCS#11 module.
-    pub fn finalize(self: *const PKCS11Token) Error!void {
+    pub fn finalize(self: PKCS11Token) Error!void {
         const args: C.CK_VOID_PTR = null;
-        const rv = self.funcs.C_Finalize.?(args);
+        const rv = self.ctx.*.*.C_Finalize.?(args);
         try returnIfError(rv);
     }
 
     /// Caller must free returned memory.
     /// Retrieves a slot list.
-    pub fn getSlotList(self: *const PKCS11Token, allocator: *const Allocator, token_present: bool) Error![]usize {
+    pub fn getSlotList(self: PKCS11Token, allocator: Allocator, token_present: bool) Error![]usize {
         const present: C.CK_BBOOL = if (token_present) C.CK_TRUE else C.CK_FALSE;
         var slot_count: C.CK_ULONG = undefined;
 
-        var rv = self.funcs.C_GetSlotList.?(present, null, &slot_count);
+        var rv = self.ctx.*.*.C_GetSlotList.?(present, null, &slot_count);
         try returnIfError(rv);
 
         const slot_list = try allocator.alloc(C.CK_ULONG, slot_count);
-        rv = self.funcs.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
+        rv = self.ctx.*.*.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
         try returnIfError(rv);
 
         return slot_list;
@@ -73,20 +77,20 @@ pub const PKCS11Token = struct {
 
     /// Caller must free returned memory.
     /// Retrieves information about the given slot.
-    pub fn getSlotInfo(self: *const PKCS11Token, allocator: *const Allocator, slot_id: usize) Error!*SlotInfo {
+    pub fn getSlotInfo(self: PKCS11Token, allocator: Allocator, slot_id: usize) Error!*SlotInfo {
         var c_slot_info: C.CK_SLOT_INFO = undefined;
-        const rv = self.funcs.C_GetSlotInfo.?(slot_id, &c_slot_info);
+        const rv = self.ctx.*.*.C_GetSlotInfo.?(slot_id, &c_slot_info);
         try returnIfError(rv);
 
         const slot_info = try allocator.create(SlotInfo);
-        slot_info.description = c_slot_info.slotDescription;
-        slot_info.manufacturer_id = c_slot_info.manufacturerID;
+        @memcpy(&slot_info.description, &c_slot_info.slotDescription);
+        @memcpy(&slot_info.manufacturer_id, &c_slot_info.manufacturerID);
         slot_info.flags = c_slot_info.flags;
-        slot_info.hardware_version = Version{
+        slot_info.hardware_version = .{
             .major = c_slot_info.hardwareVersion.major,
             .minor = c_slot_info.hardwareVersion.minor,
         };
-        slot_info.firmware_version = Version{
+        slot_info.firmware_version = .{
             .major = c_slot_info.firmwareVersion.major,
             .minor = c_slot_info.firmwareVersion.minor,
         };
@@ -403,11 +407,13 @@ fn decodeRv(rv: c_ulong) ReturnValue {
 }
 
 test "it can load a PKCS#11 library." {
-    _ = try PKCS11Token.init(config.module);
+    var token = try PKCS11Token.init(config.module);
+    defer token.deinit();
 }
 
 test "it can initialize and finalize the token." {
     var token = try PKCS11Token.init(config.module);
+    defer token.deinit();
 
     try token.initialize();
     try token.finalize();
@@ -415,10 +421,11 @@ test "it can initialize and finalize the token." {
 
 test "it can get a slot list and slot info" {
     var token = try PKCS11Token.init(config.module);
+    defer token.deinit();
 
     try token.initialize();
 
-    const allocator = &testing.allocator;
+    const allocator = testing.allocator;
     const slots = try token.getSlotList(allocator, false);
     defer allocator.free(slots);
 
@@ -427,11 +434,5 @@ test "it can get a slot list and slot info" {
     const slot_info = try token.getSlotInfo(allocator, slots[0]);
     defer allocator.destroy(slot_info);
 
-    std.debug.print("\nSlot Description: {s}, Hardware Version: {d}.{d}, Firmware Version: {d}.{d}\n", .{
-        slot_info.description,
-        slot_info.hardware_version.major,
-        slot_info.hardware_version.minor,
-        slot_info.firmware_version.major,
-        slot_info.firmware_version.minor,
-    });
+    try testing.expectStringStartsWith(&slot_info.description, "SoftHSM");
 }
