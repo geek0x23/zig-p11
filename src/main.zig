@@ -6,10 +6,6 @@ const C = @cImport({
     @cInclude("cryptoki.h");
 });
 
-pub const std_options = .{
-    .log_level = .debug,
-};
-
 const Allocator = std.mem.Allocator;
 const alloc = std.heap.c_allocator;
 const mem = std.mem;
@@ -30,45 +26,45 @@ pub const SlotInfo = struct {
 
 const Context = struct {
     lib: std.DynLib,
-    ctx: C.CK_FUNCTION_LIST_PTR,
+    sym: C.CK_FUNCTION_LIST_PTR,
 };
 
 pub const PKCS11Token = struct {
-    c: *Context,
+    ctx: *Context,
 
     /// Caller must deinit() to free internally-allocated memory.
     /// Opens the given PKCS#11 library and loads symbols from it.
     pub fn init(path: []const u8) !PKCS11Token {
-        var module = try std.DynLib.open(path);
+        var lib = try std.DynLib.open(path);
 
         const context = try alloc.create(Context);
-        context.lib = module;
+        context.lib = lib;
 
-        const getFunctionList = module.lookup(C.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
-        const rv = getFunctionList(&context.ctx);
+        const getFunctionList = lib.lookup(C.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
+        const rv = getFunctionList(&context.sym);
         try returnIfError(rv);
 
-        return .{ .c = context };
+        return .{ .ctx = context };
     }
 
     /// Closes the PKCS#11 library and frees internally-allocated memory.
     pub fn deinit(self: *PKCS11Token) void {
-        self.c.lib.close();
-        alloc.destroy(self.c);
+        self.ctx.lib.close();
+        alloc.destroy(self.ctx);
         self.* = undefined;
     }
 
     /// Initializes the PKCS#11 module.
     pub fn initialize(self: PKCS11Token) Error!void {
         var args: C.CK_C_INITIALIZE_ARGS = .{ .flags = C.CKF_OS_LOCKING_OK };
-        const rv = self.c.ctx.*.C_Initialize.?(&args);
+        const rv = self.ctx.sym.*.C_Initialize.?(&args);
         try returnIfError(rv);
     }
 
     /// Finalizes the PKCS#11 module.
     pub fn finalize(self: PKCS11Token) Error!void {
         const args: C.CK_VOID_PTR = null;
-        const rv = self.c.ctx.*.C_Finalize.?(args);
+        const rv = self.ctx.sym.*.C_Finalize.?(args);
         try returnIfError(rv);
     }
 
@@ -78,11 +74,11 @@ pub const PKCS11Token = struct {
         const present: C.CK_BBOOL = if (token_present) C.CK_TRUE else C.CK_FALSE;
         var slot_count: C.CK_ULONG = undefined;
 
-        var rv = self.c.ctx.*.C_GetSlotList.?(present, null, &slot_count);
+        var rv = self.ctx.sym.*.C_GetSlotList.?(present, null, &slot_count);
         try returnIfError(rv);
 
         const slot_list = try allocator.alloc(C.CK_ULONG, slot_count);
-        rv = self.c.ctx.*.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
+        rv = self.ctx.sym.*.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
         try returnIfError(rv);
 
         return slot_list;
@@ -92,7 +88,7 @@ pub const PKCS11Token = struct {
     /// Retrieves information about the given slot.
     pub fn getSlotInfo(self: PKCS11Token, allocator: Allocator, slot_id: usize) Error!*SlotInfo {
         var c_slot_info: C.CK_SLOT_INFO = undefined;
-        const rv = self.c.ctx.*.C_GetSlotInfo.?(slot_id, &c_slot_info);
+        const rv = self.ctx.sym.*.C_GetSlotInfo.?(slot_id, &c_slot_info);
         try returnIfError(rv);
 
         const slot_info = try allocator.create(SlotInfo);
