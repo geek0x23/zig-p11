@@ -7,19 +7,19 @@ pub fn build(b: *std.Build) void {
 
     const lib = b.addStaticLibrary(.{
         .name = "p11",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = .{ .path = "src/p11.zig" },
         .target = target,
         .optimize = optimize,
     });
 
     lib.linkLibC();
-    lib.addIncludePath(.{ .path = "include" });
+    lib.addIncludePath(.{ .path = "vendor" });
 
     b.installArtifact(lib);
 
     const lib_unit_tests = b.addTest(.{
         .name = "p11-tests",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = .{ .path = "src/p11.zig" },
         .target = target,
         .optimize = optimize,
     });
@@ -29,7 +29,7 @@ pub fn build(b: *std.Build) void {
     options.addOption([]const u8, "module", module);
 
     lib_unit_tests.linkLibC();
-    lib_unit_tests.addIncludePath(.{ .path = "include" });
+    lib_unit_tests.addIncludePath(.{ .path = "vendor" });
     lib_unit_tests.root_module.addOptions("config", options);
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);

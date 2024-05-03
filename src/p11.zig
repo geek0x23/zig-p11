@@ -24,6 +24,35 @@ pub const SlotInfo = struct {
     firmware_version: Version,
 };
 
+pub const Info = struct {
+    cryptoki_version: Version,
+    manufacturer_id: [32]u8,
+    flags: usize,
+    library_description: [32]u8,
+    library_version: Version,
+};
+
+pub const TokenInfo = struct {
+    label: [32]u8,
+    manufacturer_id: [32]u8,
+    model: [16]u8,
+    serial_number: [16]u8,
+    flags: usize,
+    max_session_count: u64,
+    session_count: u64,
+    max_rw_session_count: u64,
+    rw_session_count: u64,
+    max_pin_len: u64,
+    min_pin_len: u64,
+    total_public_memory: u64,
+    free_public_memory: u64,
+    total_private_memory: u64,
+    free_private_memory: u64,
+    hardware_version: Version,
+    firmware_version: Version,
+    utc_time: [16]u8,
+};
+
 const Context = struct {
     lib: std.DynLib,
     sym: C.CK_FUNCTION_LIST_PTR,
@@ -68,9 +97,32 @@ pub const PKCS11Token = struct {
         try returnIfError(rv);
     }
 
+    /// Caller must free returned memory
+    /// Retrieves general token information.
+    pub fn getInfo(self: PKCS11Token, allocator: Allocator) Error!*Info {
+        var c_info: C.CK_INFO = undefined;
+        const rv = self.ctx.sym.*.C_GetInfo.?(&c_info);
+        try returnIfError(rv);
+
+        const info = try allocator.create(Info);
+        @memcpy(&info.manufacturer_id, &c_info.manufacturerID);
+        @memcpy(&info.library_description, &c_info.libraryDescription);
+        info.flags = c_info.flags;
+        info.cryptoki_version = .{
+            .major = c_info.cryptokiVersion.major,
+            .minor = c_info.cryptokiVersion.minor,
+        };
+        info.library_version = .{
+            .major = c_info.libraryVersion.major,
+            .minor = c_info.libraryVersion.minor,
+        };
+
+        return info;
+    }
+
     /// Caller must free returned memory.
     /// Retrieves a slot list.
-    pub fn getSlotList(self: PKCS11Token, allocator: Allocator, token_present: bool) Error![]usize {
+    pub fn getSlotList(self: PKCS11Token, allocator: Allocator, token_present: bool) Error![]u64 {
         const present: C.CK_BBOOL = if (token_present) C.CK_TRUE else C.CK_FALSE;
         var slot_count: C.CK_ULONG = undefined;
 
@@ -86,7 +138,7 @@ pub const PKCS11Token = struct {
 
     /// Caller must free returned memory.
     /// Retrieves information about the given slot.
-    pub fn getSlotInfo(self: PKCS11Token, allocator: Allocator, slot_id: usize) Error!*SlotInfo {
+    pub fn getSlotInfo(self: PKCS11Token, allocator: Allocator, slot_id: u64) Error!*SlotInfo {
         var c_slot_info: C.CK_SLOT_INFO = undefined;
         const rv = self.ctx.sym.*.C_GetSlotInfo.?(slot_id, &c_slot_info);
         try returnIfError(rv);
@@ -103,7 +155,42 @@ pub const PKCS11Token = struct {
             .major = c_slot_info.firmwareVersion.major,
             .minor = c_slot_info.firmwareVersion.minor,
         };
+
         return slot_info;
+    }
+
+    pub fn getTokenInfo(self: PKCS11Token, allocator: Allocator, slot_id: u64) Error!*TokenInfo {
+        var c_token_info: C.CK_TOKEN_INFO = undefined;
+        const rv = self.ctx.sym.*.C_GetTokenInfo.?(slot_id, &c_token_info);
+        try returnIfError(rv);
+
+        const token_info = try allocator.create(TokenInfo);
+        @memcpy(&token_info.label, &c_token_info.label);
+        @memcpy(&token_info.manufacturer_id, &c_token_info.manufacturerID);
+        @memcpy(&token_info.model, &c_token_info.model);
+        @memcpy(&token_info.serial_number, &c_token_info.serialNumber);
+        token_info.flags = c_token_info.flags;
+        token_info.max_session_count = c_token_info.ulMaxSessionCount;
+        token_info.session_count = c_token_info.ulSessionCount;
+        token_info.max_rw_session_count = c_token_info.ulMaxRwSessionCount;
+        token_info.rw_session_count = c_token_info.ulRwSessionCount;
+        token_info.max_pin_len = c_token_info.ulMaxPinLen;
+        token_info.min_pin_len = c_token_info.ulMinPinLen;
+        token_info.total_public_memory = c_token_info.ulTotalPublicMemory;
+        token_info.free_public_memory = c_token_info.ulFreePublicMemory;
+        token_info.total_private_memory = c_token_info.ulTotalPrivateMemory;
+        token_info.free_private_memory = c_token_info.ulFreePrivateMemory;
+        token_info.hardware_version = .{
+            .major = c_token_info.hardwareVersion.major,
+            .minor = c_token_info.hardwareVersion.minor,
+        };
+        token_info.firmware_version = .{
+            .major = c_token_info.firmwareVersion.major,
+            .minor = c_token_info.firmwareVersion.minor,
+        };
+        @memcpy(&token_info.utc_time, &c_token_info.utcTime);
+
+        return token_info;
     }
 
     pub const Error = error{
@@ -428,20 +515,25 @@ test "it can initialize and finalize the token." {
     try token.finalize();
 }
 
-test "it can get a slot list and slot info" {
+test "it can get all the infos" {
     var token = try PKCS11Token.init(config.module);
     defer token.deinit();
-
     try token.initialize();
-
     const allocator = testing.allocator;
+
     const slots = try token.getSlotList(allocator, false);
     defer allocator.free(slots);
-
     try testing.expect(slots.len > 0);
 
     const slot_info = try token.getSlotInfo(allocator, slots[0]);
     defer allocator.destroy(slot_info);
-
     try testing.expectStringStartsWith(&slot_info.description, "SoftHSM");
+
+    const info = try token.getInfo(allocator);
+    defer allocator.destroy(info);
+    try testing.expectStringStartsWith(&info.manufacturer_id, "SoftHSM");
+
+    const token_info = try token.getTokenInfo(allocator, slots[0]);
+    defer allocator.destroy(token_info);
+    try testing.expectStringStartsWith(&token_info.manufacturer_id, "SoftHSM");
 }
