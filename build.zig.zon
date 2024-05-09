@@ -1,7 +1,12 @@
 .{
     .name = "p11",
     .version = "0.0.1",
-    .dependencies = .{},
+    .dependencies = .{
+        .pkcs11 = .{
+            .url = "https://github.com/oasis-tcs/pkcs11/archive/refs/tags/2-40-errata-1.tar.gz",
+            .hash = "12208f8169d4e3c53bf3c00452cbdfddaad270c75e0bbcdd5038a18198868fcd1dca",
+        },
+    },
     .paths = .{
         "src",
         "include",

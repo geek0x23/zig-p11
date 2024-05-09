@@ -5,6 +5,11 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const pkcs11 = b.dependency("pkcs11", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const lib = b.addStaticLibrary(.{
         .name = "p11",
         .root_source_file = .{ .path = "src/p11.zig" },
@@ -13,7 +18,8 @@ pub fn build(b: *std.Build) void {
     });
 
     lib.linkLibC();
-    lib.addIncludePath(.{ .path = "vendor" });
+    lib.addIncludePath(.{ .path = "include" });
+    lib.addIncludePath(pkcs11.path("published/2-40-errata-1"));
 
     b.installArtifact(lib);
 
@@ -29,7 +35,8 @@ pub fn build(b: *std.Build) void {
     options.addOption([]const u8, "module", module);
 
     lib_unit_tests.linkLibC();
-    lib_unit_tests.addIncludePath(.{ .path = "vendor" });
+    lib_unit_tests.addIncludePath(.{ .path = "include" });
+    lib_unit_tests.addIncludePath(pkcs11.path("published/2-40-errata-1"));
     lib_unit_tests.root_module.addOptions("config", options);
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);

@@ -1,5 +1,4 @@
 const std = @import("std");
-const log = std.log.scoped(.p11);
 const builtin = @import("builtin");
 const config = @import("config");
 const C = @cImport({
@@ -32,7 +31,8 @@ pub const SlotFlags = struct {
 pub const Info = struct {
     cryptoki_version: Version,
     manufacturer_id: [32]u8,
-    flags: u8 = 0, // per PKCS#11 spec, this field is always zero.
+    /// Per the PKCS#11 spec, this field is always zero.
+    flags: u8 = 0,
     library_description: [32]u8,
     library_version: Version,
 };
@@ -571,10 +571,11 @@ test "it can initialize and finalize the token." {
 }
 
 test "it can get all the infos" {
-    var token = try PKCS11Token.init(testing.allocator, config.module);
+    const allocator = testing.allocator;
+    var token = try PKCS11Token.init(allocator, config.module);
+
     defer token.deinit();
     try token.initialize();
-    const allocator = testing.allocator;
 
     const slots = try token.getSlotList(false);
     defer allocator.free(slots);
