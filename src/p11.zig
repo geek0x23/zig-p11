@@ -229,12 +229,6 @@ pub const MechanismECFlags = struct {
     }
 };
 
-pub const UserType = enum(c_ulong) {
-    system_operator = c.CKU_SO,
-    user = c.CKU_USER,
-    context_specific = c.CKU_CONTEXT_SPECIFIC,
-};
-
 pub const MechanismType = enum(c_ulong) {
     rsa_pkcs_key_pair_gen = c.CKM_RSA_PKCS_KEY_PAIR_GEN,
     rsa_pkcs = c.CKM_RSA_PKCS,
@@ -562,6 +556,15 @@ pub const MechanismType = enum(c_ulong) {
     aes_key_wrap_pad = c.CKM_AES_KEY_WRAP_PAD,
     rsa_pkcs_tpm_1_1 = c.CKM_RSA_PKCS_TPM_1_1,
     rsa_pkcs_oaep_tpm_1_1 = c.CKM_RSA_PKCS_OAEP_TPM_1_1,
+    // Some implementations of PKCS#11 back-ported v3 mechanisms to v2.40.... so we do the same to avoid panics.
+    ec_edwards_key_pair_gen = 0x00001055,
+    eddsa = 0x00001057,
+};
+
+pub const UserType = enum(c_ulong) {
+    system_operator = c.CKU_SO,
+    user = c.CKU_USER,
+    context_specific = c.CKU_CONTEXT_SPECIFIC,
 };
 
 const Context = struct {
@@ -595,22 +598,19 @@ pub const PKCS11Token = struct {
         self.* = undefined;
     }
 
-    /// Initializes the PKCS#11 module.
     pub fn initialize(self: PKCS11Token) Error!void {
         var args: c.CK_C_INITIALIZE_ARGS = .{ .flags = c.CKF_OS_LOCKING_OK };
         const rv = self.ctx.sym.C_Initialize.?(&args);
         try returnIfError(rv);
     }
 
-    /// Finalizes the PKCS#11 module.
     pub fn finalize(self: PKCS11Token) Error!void {
         const args: c.CK_VOID_PTR = null;
         const rv = self.ctx.sym.C_Finalize.?(args);
         try returnIfError(rv);
     }
 
-    /// Caller must free returned memory
-    /// Retrieves general token information.
+    /// Caller owns returned memory.
     pub fn getInfo(self: PKCS11Token) Error!Info {
         var info: c.CK_INFO = undefined;
         const rv = self.ctx.sym.C_GetInfo.?(&info);
@@ -620,7 +620,6 @@ pub const PKCS11Token = struct {
     }
 
     /// Caller owns returned memory.
-    /// Retrieves a slot list.
     pub fn getSlotList(self: PKCS11Token, token_present: bool) Error![]c_ulong {
         const present: c.CK_BBOOL = if (token_present) c.CK_TRUE else c.CK_FALSE;
         var slot_count: c.CK_ULONG = undefined;
@@ -635,7 +634,6 @@ pub const PKCS11Token = struct {
         return slot_list;
     }
 
-    /// Retrieves information about the given slot.
     pub fn getSlotInfo(self: PKCS11Token, slot_id: c_ulong) Error!SlotInfo {
         var slot_info: c.CK_SLOT_INFO = undefined;
         const rv = self.ctx.sym.C_GetSlotInfo.?(slot_id, &slot_info);
@@ -644,7 +642,6 @@ pub const PKCS11Token = struct {
         return SlotInfo.fromCType(slot_info);
     }
 
-    /// Retrieves information about the token in the given slot.
     pub fn getTokenInfo(self: PKCS11Token, slot_id: c_ulong) Error!TokenInfo {
         var token_info: c.CK_TOKEN_INFO = undefined;
         const rv = self.ctx.sym.C_GetTokenInfo.?(slot_id, &token_info);
@@ -654,15 +651,14 @@ pub const PKCS11Token = struct {
     }
 
     /// Caller owns returned memory.
-    /// Retrieves a list of mechanisms supported by the given slot.
-    pub fn getMechanismList(self: PKCS11Token, slot_id: c_ulong) Error![]c_ulong {
+    pub fn getMechanismList(self: PKCS11Token, slot_id: c_ulong) Error![]MechanismType {
         var mech_count: c.CK_ULONG = undefined;
 
         var rv = self.ctx.sym.C_GetMechanismList.?(slot_id, null, &mech_count);
         try returnIfError(rv);
 
-        const mech_list = try self.allocator.alloc(c.CK_ULONG, mech_count);
-        rv = self.ctx.sym.C_GetMechanismList.?(slot_id, mech_list.ptr, &mech_count);
+        const mech_list = try self.allocator.alloc(MechanismType, mech_count);
+        rv = self.ctx.sym.C_GetMechanismList.?(slot_id, @ptrCast(mech_list.ptr), &mech_count);
         try returnIfError(rv);
 
         return mech_list;
