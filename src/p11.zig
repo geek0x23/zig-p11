@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const config = @import("config");
-const C = @cImport({
+const c = @cImport({
     @cInclude("cryptoki.h");
 });
 
@@ -12,7 +12,7 @@ pub const Version = struct {
     major: u8,
     minor: u8,
 
-    fn fromCType(version: C.CK_VERSION) Version {
+    fn fromCType(version: c.CK_VERSION) Version {
         return .{ .major = version.major, .minor = version.minor };
     }
 };
@@ -24,7 +24,7 @@ pub const SlotInfo = struct {
     hardware_version: Version,
     firmware_version: Version,
 
-    fn fromCType(info: C.CK_SLOT_INFO) SlotInfo {
+    fn fromCType(info: c.CK_SLOT_INFO) SlotInfo {
         return .{
             .description = info.slotDescription,
             .manufacturer_id = info.manufacturerID,
@@ -40,11 +40,11 @@ pub const SlotFlags = struct {
     removable_device: bool = false,
     hardware_slot: bool = false,
 
-    fn fromCType(flags: C.CK_FLAGS) SlotFlags {
+    fn fromCType(flags: c.CK_FLAGS) SlotFlags {
         return .{
-            .hardware_slot = (flags & C.CKF_HW_SLOT) == flags,
-            .removable_device = (flags & C.CKF_REMOVABLE_DEVICE) == flags,
-            .token_present = (flags & C.CKF_TOKEN_PRESENT) == flags,
+            .hardware_slot = (flags & c.CKF_HW_SLOT) == flags,
+            .removable_device = (flags & c.CKF_REMOVABLE_DEVICE) == flags,
+            .token_present = (flags & c.CKF_TOKEN_PRESENT) == flags,
         };
     }
 };
@@ -57,7 +57,7 @@ pub const Info = struct {
     library_description: [32]u8,
     library_version: Version,
 
-    fn fromCType(info: C.CK_INFO) Info {
+    fn fromCType(info: c.CK_INFO) Info {
         return .{
             .manufacturer_id = info.manufacturerID,
             .library_description = info.libraryDescription,
@@ -87,7 +87,7 @@ pub const TokenInfo = struct {
     firmware_version: Version,
     utc_time: [16]u8,
 
-    fn fromCType(info: C.CK_TOKEN_INFO) TokenInfo {
+    fn fromCType(info: c.CK_TOKEN_INFO) TokenInfo {
         return .{
             .label = info.label,
             .manufacturer_id = info.manufacturerID,
@@ -132,40 +132,40 @@ pub const TokenFlags = struct {
     so_pin_to_be_changed: bool = false,
     error_state: bool = false,
 
-    fn fromCType(flags: C.CK_FLAGS) TokenFlags {
+    fn fromCType(flags: c.CK_FLAGS) TokenFlags {
         return .{
-            .rng = (flags & C.CKF_RNG) == flags,
-            .write_protected = (flags & C.CKF_WRITE_PROTECTED) == flags,
-            .login_required = (flags & C.CKF_LOGIN_REQUIRED) == flags,
-            .user_pin_initialized = (flags & C.CKF_USER_PIN_INITIALIZED) == flags,
-            .restore_key_not_needed = (flags & C.CKF_RESTORE_KEY_NOT_NEEDED) == flags,
-            .clock_on_token = (flags & C.CKF_CLOCK_ON_TOKEN) == flags,
-            .protected_authentication_path = (flags & C.CKF_PROTECTED_AUTHENTICATION_PATH) == flags,
-            .dual_crypto_operations = (flags & C.CKF_DUAL_CRYPTO_OPERATIONS) == flags,
-            .token_initialized = (flags & C.CKF_TOKEN_INITIALIZED) == flags,
-            .secondary_authentication = (flags & C.CKF_SECONDARY_AUTHENTICATION) == flags,
-            .user_pin_count_low = (flags & C.CKF_USER_PIN_COUNT_LOW) == flags,
-            .user_pin_final_try = (flags & C.CKF_USER_PIN_FINAL_TRY) == flags,
-            .user_pin_locked = (flags & C.CKF_USER_PIN_LOCKED) == flags,
-            .user_pin_to_be_changed = (flags & C.CKF_USER_PIN_TO_BE_CHANGED) == flags,
-            .so_pin_count_low = (flags & C.CKF_SO_PIN_COUNT_LOW) == flags,
-            .so_pin_final_try = (flags & C.CKF_SO_PIN_FINAL_TRY) == flags,
-            .so_pin_locked = (flags & C.CKF_SO_PIN_LOCKED) == flags,
-            .so_pin_to_be_changed = (flags & C.CKF_SO_PIN_TO_BE_CHANGED) == flags,
-            .error_state = (flags & C.CKF_ERROR_STATE) == flags,
+            .rng = (flags & c.CKF_RNG) == flags,
+            .write_protected = (flags & c.CKF_WRITE_PROTECTED) == flags,
+            .login_required = (flags & c.CKF_LOGIN_REQUIRED) == flags,
+            .user_pin_initialized = (flags & c.CKF_USER_PIN_INITIALIZED) == flags,
+            .restore_key_not_needed = (flags & c.CKF_RESTORE_KEY_NOT_NEEDED) == flags,
+            .clock_on_token = (flags & c.CKF_CLOCK_ON_TOKEN) == flags,
+            .protected_authentication_path = (flags & c.CKF_PROTECTED_AUTHENTICATION_PATH) == flags,
+            .dual_crypto_operations = (flags & c.CKF_DUAL_CRYPTO_OPERATIONS) == flags,
+            .token_initialized = (flags & c.CKF_TOKEN_INITIALIZED) == flags,
+            .secondary_authentication = (flags & c.CKF_SECONDARY_AUTHENTICATION) == flags,
+            .user_pin_count_low = (flags & c.CKF_USER_PIN_COUNT_LOW) == flags,
+            .user_pin_final_try = (flags & c.CKF_USER_PIN_FINAL_TRY) == flags,
+            .user_pin_locked = (flags & c.CKF_USER_PIN_LOCKED) == flags,
+            .user_pin_to_be_changed = (flags & c.CKF_USER_PIN_TO_BE_CHANGED) == flags,
+            .so_pin_count_low = (flags & c.CKF_SO_PIN_COUNT_LOW) == flags,
+            .so_pin_final_try = (flags & c.CKF_SO_PIN_FINAL_TRY) == flags,
+            .so_pin_locked = (flags & c.CKF_SO_PIN_LOCKED) == flags,
+            .so_pin_to_be_changed = (flags & c.CKF_SO_PIN_TO_BE_CHANGED) == flags,
+            .error_state = (flags & c.CKF_ERROR_STATE) == flags,
         };
     }
 };
 
 pub const UserType = enum(u64) {
-    SystemOperator = C.CKU_SO,
-    User = C.CKU_USER,
-    ContextSpecific = C.CKU_CONTEXT_SPECIFIC,
+    SystemOperator = c.CKU_SO,
+    User = c.CKU_USER,
+    ContextSpecific = c.CKU_CONTEXT_SPECIFIC,
 };
 
 const Context = struct {
     lib: std.DynLib,
-    sym: *C.CK_FUNCTION_LIST,
+    sym: *c.CK_FUNCTION_LIST,
 };
 
 pub const PKCS11Token = struct {
@@ -180,7 +180,7 @@ pub const PKCS11Token = struct {
         const context = try alloc.create(Context);
         context.lib = lib;
 
-        const getFunctionList = lib.lookup(C.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
+        const getFunctionList = lib.lookup(c.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
         const rv = getFunctionList(@ptrCast(&context.sym));
         try returnIfError(rv);
 
@@ -196,14 +196,14 @@ pub const PKCS11Token = struct {
 
     /// Initializes the PKCS#11 module.
     pub fn initialize(self: PKCS11Token) Error!void {
-        var args: C.CK_C_INITIALIZE_ARGS = .{ .flags = C.CKF_OS_LOCKING_OK };
+        var args: c.CK_C_INITIALIZE_ARGS = .{ .flags = c.CKF_OS_LOCKING_OK };
         const rv = self.ctx.sym.C_Initialize.?(&args);
         try returnIfError(rv);
     }
 
     /// Finalizes the PKCS#11 module.
     pub fn finalize(self: PKCS11Token) Error!void {
-        const args: C.CK_VOID_PTR = null;
+        const args: c.CK_VOID_PTR = null;
         const rv = self.ctx.sym.C_Finalize.?(args);
         try returnIfError(rv);
     }
@@ -211,7 +211,7 @@ pub const PKCS11Token = struct {
     /// Caller must free returned memory
     /// Retrieves general token information.
     pub fn getInfo(self: PKCS11Token) Error!Info {
-        var info: C.CK_INFO = undefined;
+        var info: c.CK_INFO = undefined;
         const rv = self.ctx.sym.C_GetInfo.?(&info);
         try returnIfError(rv);
 
@@ -221,13 +221,13 @@ pub const PKCS11Token = struct {
     /// Caller owns returned memory.
     /// Retrieves a slot list.
     pub fn getSlotList(self: PKCS11Token, token_present: bool) Error![]u64 {
-        const present: C.CK_BBOOL = if (token_present) C.CK_TRUE else C.CK_FALSE;
-        var slot_count: C.CK_ULONG = undefined;
+        const present: c.CK_BBOOL = if (token_present) c.CK_TRUE else c.CK_FALSE;
+        var slot_count: c.CK_ULONG = undefined;
 
         var rv = self.ctx.sym.C_GetSlotList.?(present, null, &slot_count);
         try returnIfError(rv);
 
-        const slot_list = try self.allocator.alloc(C.CK_ULONG, slot_count);
+        const slot_list = try self.allocator.alloc(c.CK_ULONG, slot_count);
         rv = self.ctx.sym.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
         try returnIfError(rv);
 
@@ -236,7 +236,7 @@ pub const PKCS11Token = struct {
 
     /// Retrieves information about the given slot.
     pub fn getSlotInfo(self: PKCS11Token, slot_id: u64) Error!SlotInfo {
-        var slot_info: C.CK_SLOT_INFO = undefined;
+        var slot_info: c.CK_SLOT_INFO = undefined;
         const rv = self.ctx.sym.C_GetSlotInfo.?(slot_id, &slot_info);
         try returnIfError(rv);
 
@@ -245,7 +245,7 @@ pub const PKCS11Token = struct {
 
     /// Retrieves information about the token in the given slot.
     pub fn getTokenInfo(self: PKCS11Token, slot_id: u64) Error!TokenInfo {
-        var token_info: C.CK_TOKEN_INFO = undefined;
+        var token_info: c.CK_TOKEN_INFO = undefined;
         const rv = self.ctx.sym.C_GetTokenInfo.?(slot_id, &token_info);
         try returnIfError(rv);
 
@@ -453,101 +453,101 @@ fn returnValueToError(rv: ReturnValue) Error {
 }
 
 const ReturnValue = enum(c_ulong) {
-    OK = C.CKR_OK,
-    CANCEL = C.CKR_CANCEL,
-    HOST_MEMORY = C.CKR_HOST_MEMORY,
-    SLOT_ID_INVALID = C.CKR_SLOT_ID_INVALID,
-    GENERAL_ERROR = C.CKR_GENERAL_ERROR,
-    FUNCTION_FAILED = C.CKR_FUNCTION_FAILED,
-    ARGUMENTS_BAD = C.CKR_ARGUMENTS_BAD,
-    NO_EVENT = C.CKR_NO_EVENT,
-    NEED_TO_CREATE_THREADS = C.CKR_NEED_TO_CREATE_THREADS,
-    CANT_LOCK = C.CKR_CANT_LOCK,
-    ATTRIBUTE_READ_ONLY = C.CKR_ATTRIBUTE_READ_ONLY,
-    ATTRIBUTE_SENSITIVE = C.CKR_ATTRIBUTE_SENSITIVE,
-    ATTRIBUTE_TYPE_INVALID = C.CKR_ATTRIBUTE_TYPE_INVALID,
-    ATTRIBUTE_VALUE_INVALID = C.CKR_ATTRIBUTE_VALUE_INVALID,
-    ACTION_PROHIBITED = C.CKR_ACTION_PROHIBITED,
-    DATA_INVALID = C.CKR_DATA_INVALID,
-    DATA_LEN_RANGE = C.CKR_DATA_LEN_RANGE,
-    DEVICE_ERROR = C.CKR_DEVICE_ERROR,
-    DEVICE_MEMORY = C.CKR_DEVICE_MEMORY,
-    DEVICE_REMOVED = C.CKR_DEVICE_REMOVED,
-    ENCRYPTED_DATA_INVALID = C.CKR_ENCRYPTED_DATA_INVALID,
-    ENCRYPTED_DATA_LEN_RANGE = C.CKR_ENCRYPTED_DATA_LEN_RANGE,
-    FUNCTION_CANCELED = C.CKR_FUNCTION_CANCELED,
-    FUNCTION_NOT_PARALLEL = C.CKR_FUNCTION_NOT_PARALLEL,
-    FUNCTION_NOT_SUPPORTED = C.CKR_FUNCTION_NOT_SUPPORTED,
-    KEY_HANDLE_INVALID = C.CKR_KEY_HANDLE_INVALID,
-    KEY_SIZE_RANGE = C.CKR_KEY_SIZE_RANGE,
-    KEY_TYPE_INCONSISTENT = C.CKR_KEY_TYPE_INCONSISTENT,
-    KEY_NOT_NEEDED = C.CKR_KEY_NOT_NEEDED,
-    KEY_CHANGED = C.CKR_KEY_CHANGED,
-    KEY_NEEDED = C.CKR_KEY_NEEDED,
-    KEY_INDIGESTIBLE = C.CKR_KEY_INDIGESTIBLE,
-    KEY_FUNCTION_NOT_PERMITTED = C.CKR_KEY_FUNCTION_NOT_PERMITTED,
-    KEY_NOT_WRAPPABLE = C.CKR_KEY_NOT_WRAPPABLE,
-    KEY_UNEXTRACTABLE = C.CKR_KEY_UNEXTRACTABLE,
-    MECHANISM_INVALID = C.CKR_MECHANISM_INVALID,
-    MECHANISM_PARAM_INVALID = C.CKR_MECHANISM_PARAM_INVALID,
-    OBJECT_HANDLE_INVALID = C.CKR_OBJECT_HANDLE_INVALID,
-    OPERATION_ACTIVE = C.CKR_OPERATION_ACTIVE,
-    OPERATION_NOT_INITIALIZED = C.CKR_OPERATION_NOT_INITIALIZED,
-    PIN_INCORRECT = C.CKR_PIN_INCORRECT,
-    PIN_INVALID = C.CKR_PIN_INVALID,
-    PIN_LEN_RANGE = C.CKR_PIN_LEN_RANGE,
-    PIN_EXPIRED = C.CKR_PIN_EXPIRED,
-    PIN_LOCKED = C.CKR_PIN_LOCKED,
-    SESSION_CLOSED = C.CKR_SESSION_CLOSED,
-    SESSION_COUNT = C.CKR_SESSION_COUNT,
-    SESSION_HANDLE_INVALID = C.CKR_SESSION_HANDLE_INVALID,
-    SESSION_PARALLEL_NOT_SUPPORTED = C.CKR_SESSION_PARALLEL_NOT_SUPPORTED,
-    SESSION_READ_ONLY = C.CKR_SESSION_READ_ONLY,
-    SESSION_EXISTS = C.CKR_SESSION_EXISTS,
-    SESSION_READ_ONLY_EXISTS = C.CKR_SESSION_READ_ONLY_EXISTS,
-    SESSION_READ_WRITE_SO_EXISTS = C.CKR_SESSION_READ_WRITE_SO_EXISTS,
-    SIGNATURE_INVALID = C.CKR_SIGNATURE_INVALID,
-    SIGNATURE_LEN_RANGE = C.CKR_SIGNATURE_LEN_RANGE,
-    TEMPLATE_INCOMPLETE = C.CKR_TEMPLATE_INCOMPLETE,
-    TEMPLATE_INCONSISTENT = C.CKR_TEMPLATE_INCONSISTENT,
-    TOKEN_NOT_PRESENT = C.CKR_TOKEN_NOT_PRESENT,
-    TOKEN_NOT_RECOGNIZED = C.CKR_TOKEN_NOT_RECOGNIZED,
-    TOKEN_WRITE_PROTECTED = C.CKR_TOKEN_WRITE_PROTECTED,
-    UNWRAPPING_KEY_HANDLE_INVALID = C.CKR_UNWRAPPING_KEY_HANDLE_INVALID,
-    UNWRAPPING_KEY_SIZE_RANGE = C.CKR_UNWRAPPING_KEY_SIZE_RANGE,
-    UNWRAPPING_KEY_TYPE_INCONSISTENT = C.CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT,
-    USER_ALREADY_LOGGED_IN = C.CKR_USER_ALREADY_LOGGED_IN,
-    USER_NOT_LOGGED_IN = C.CKR_USER_NOT_LOGGED_IN,
-    USER_PIN_NOT_INITIALIZED = C.CKR_USER_PIN_NOT_INITIALIZED,
-    USER_TYPE_INVALID = C.CKR_USER_TYPE_INVALID,
-    USER_ANOTHER_ALREADY_LOGGED_IN = C.CKR_USER_ANOTHER_ALREADY_LOGGED_IN,
-    USER_TOO_MANY_TYPES = C.CKR_USER_TOO_MANY_TYPES,
-    WRAPPED_KEY_INVALID = C.CKR_WRAPPED_KEY_INVALID,
-    WRAPPED_KEY_LEN_RANGE = C.CKR_WRAPPED_KEY_LEN_RANGE,
-    WRAPPING_KEY_HANDLE_INVALID = C.CKR_WRAPPING_KEY_HANDLE_INVALID,
-    WRAPPING_KEY_SIZE_RANGE = C.CKR_WRAPPING_KEY_SIZE_RANGE,
-    WRAPPING_KEY_TYPE_INCONSISTENT = C.CKR_WRAPPING_KEY_TYPE_INCONSISTENT,
-    RANDOM_SEED_NOT_SUPPORTED = C.CKR_RANDOM_SEED_NOT_SUPPORTED,
-    RANDOM_NO_RNG = C.CKR_RANDOM_NO_RNG,
-    DOMAIN_PARAMS_INVALID = C.CKR_DOMAIN_PARAMS_INVALID,
-    CURVE_NOT_SUPPORTED = C.CKR_CURVE_NOT_SUPPORTED,
-    BUFFER_TOO_SMALL = C.CKR_BUFFER_TOO_SMALL,
-    SAVED_STATE_INVALID = C.CKR_SAVED_STATE_INVALID,
-    INFORMATION_SENSITIVE = C.CKR_INFORMATION_SENSITIVE,
-    STATE_UNSAVEABLE = C.CKR_STATE_UNSAVEABLE,
-    CRYPTOKI_NOT_INITIALIZED = C.CKR_CRYPTOKI_NOT_INITIALIZED,
-    CRYPTOKI_ALREADY_INITIALIZED = C.CKR_CRYPTOKI_ALREADY_INITIALIZED,
-    MUTEX_BAD = C.CKR_MUTEX_BAD,
-    MUTEX_NOT_LOCKED = C.CKR_MUTEX_NOT_LOCKED,
-    NEW_PIN_MODE = C.CKR_NEW_PIN_MODE,
-    NEXT_OTP = C.CKR_NEXT_OTP,
-    EXCEEDED_MAX_ITERATIONS = C.CKR_EXCEEDED_MAX_ITERATIONS,
-    FIPS_SELF_TEST_FAILED = C.CKR_FIPS_SELF_TEST_FAILED,
-    LIBRARY_LOAD_FAILED = C.CKR_LIBRARY_LOAD_FAILED,
-    PIN_TOO_WEAK = C.CKR_PIN_TOO_WEAK,
-    PUBLIC_KEY_INVALID = C.CKR_PUBLIC_KEY_INVALID,
-    FUNCTION_REJECTED = C.CKR_FUNCTION_REJECTED,
-    VENDOR_DEFINED = C.CKR_VENDOR_DEFINED,
+    OK = c.CKR_OK,
+    CANCEL = c.CKR_CANCEL,
+    HOST_MEMORY = c.CKR_HOST_MEMORY,
+    SLOT_ID_INVALID = c.CKR_SLOT_ID_INVALID,
+    GENERAL_ERROR = c.CKR_GENERAL_ERROR,
+    FUNCTION_FAILED = c.CKR_FUNCTION_FAILED,
+    ARGUMENTS_BAD = c.CKR_ARGUMENTS_BAD,
+    NO_EVENT = c.CKR_NO_EVENT,
+    NEED_TO_CREATE_THREADS = c.CKR_NEED_TO_CREATE_THREADS,
+    CANT_LOCK = c.CKR_CANT_LOCK,
+    ATTRIBUTE_READ_ONLY = c.CKR_ATTRIBUTE_READ_ONLY,
+    ATTRIBUTE_SENSITIVE = c.CKR_ATTRIBUTE_SENSITIVE,
+    ATTRIBUTE_TYPE_INVALID = c.CKR_ATTRIBUTE_TYPE_INVALID,
+    ATTRIBUTE_VALUE_INVALID = c.CKR_ATTRIBUTE_VALUE_INVALID,
+    ACTION_PROHIBITED = c.CKR_ACTION_PROHIBITED,
+    DATA_INVALID = c.CKR_DATA_INVALID,
+    DATA_LEN_RANGE = c.CKR_DATA_LEN_RANGE,
+    DEVICE_ERROR = c.CKR_DEVICE_ERROR,
+    DEVICE_MEMORY = c.CKR_DEVICE_MEMORY,
+    DEVICE_REMOVED = c.CKR_DEVICE_REMOVED,
+    ENCRYPTED_DATA_INVALID = c.CKR_ENCRYPTED_DATA_INVALID,
+    ENCRYPTED_DATA_LEN_RANGE = c.CKR_ENCRYPTED_DATA_LEN_RANGE,
+    FUNCTION_CANCELED = c.CKR_FUNCTION_CANCELED,
+    FUNCTION_NOT_PARALLEL = c.CKR_FUNCTION_NOT_PARALLEL,
+    FUNCTION_NOT_SUPPORTED = c.CKR_FUNCTION_NOT_SUPPORTED,
+    KEY_HANDLE_INVALID = c.CKR_KEY_HANDLE_INVALID,
+    KEY_SIZE_RANGE = c.CKR_KEY_SIZE_RANGE,
+    KEY_TYPE_INCONSISTENT = c.CKR_KEY_TYPE_INCONSISTENT,
+    KEY_NOT_NEEDED = c.CKR_KEY_NOT_NEEDED,
+    KEY_CHANGED = c.CKR_KEY_CHANGED,
+    KEY_NEEDED = c.CKR_KEY_NEEDED,
+    KEY_INDIGESTIBLE = c.CKR_KEY_INDIGESTIBLE,
+    KEY_FUNCTION_NOT_PERMITTED = c.CKR_KEY_FUNCTION_NOT_PERMITTED,
+    KEY_NOT_WRAPPABLE = c.CKR_KEY_NOT_WRAPPABLE,
+    KEY_UNEXTRACTABLE = c.CKR_KEY_UNEXTRACTABLE,
+    MECHANISM_INVALID = c.CKR_MECHANISM_INVALID,
+    MECHANISM_PARAM_INVALID = c.CKR_MECHANISM_PARAM_INVALID,
+    OBJECT_HANDLE_INVALID = c.CKR_OBJECT_HANDLE_INVALID,
+    OPERATION_ACTIVE = c.CKR_OPERATION_ACTIVE,
+    OPERATION_NOT_INITIALIZED = c.CKR_OPERATION_NOT_INITIALIZED,
+    PIN_INCORRECT = c.CKR_PIN_INCORRECT,
+    PIN_INVALID = c.CKR_PIN_INVALID,
+    PIN_LEN_RANGE = c.CKR_PIN_LEN_RANGE,
+    PIN_EXPIRED = c.CKR_PIN_EXPIRED,
+    PIN_LOCKED = c.CKR_PIN_LOCKED,
+    SESSION_CLOSED = c.CKR_SESSION_CLOSED,
+    SESSION_COUNT = c.CKR_SESSION_COUNT,
+    SESSION_HANDLE_INVALID = c.CKR_SESSION_HANDLE_INVALID,
+    SESSION_PARALLEL_NOT_SUPPORTED = c.CKR_SESSION_PARALLEL_NOT_SUPPORTED,
+    SESSION_READ_ONLY = c.CKR_SESSION_READ_ONLY,
+    SESSION_EXISTS = c.CKR_SESSION_EXISTS,
+    SESSION_READ_ONLY_EXISTS = c.CKR_SESSION_READ_ONLY_EXISTS,
+    SESSION_READ_WRITE_SO_EXISTS = c.CKR_SESSION_READ_WRITE_SO_EXISTS,
+    SIGNATURE_INVALID = c.CKR_SIGNATURE_INVALID,
+    SIGNATURE_LEN_RANGE = c.CKR_SIGNATURE_LEN_RANGE,
+    TEMPLATE_INCOMPLETE = c.CKR_TEMPLATE_INCOMPLETE,
+    TEMPLATE_INCONSISTENT = c.CKR_TEMPLATE_INCONSISTENT,
+    TOKEN_NOT_PRESENT = c.CKR_TOKEN_NOT_PRESENT,
+    TOKEN_NOT_RECOGNIZED = c.CKR_TOKEN_NOT_RECOGNIZED,
+    TOKEN_WRITE_PROTECTED = c.CKR_TOKEN_WRITE_PROTECTED,
+    UNWRAPPING_KEY_HANDLE_INVALID = c.CKR_UNWRAPPING_KEY_HANDLE_INVALID,
+    UNWRAPPING_KEY_SIZE_RANGE = c.CKR_UNWRAPPING_KEY_SIZE_RANGE,
+    UNWRAPPING_KEY_TYPE_INCONSISTENT = c.CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT,
+    USER_ALREADY_LOGGED_IN = c.CKR_USER_ALREADY_LOGGED_IN,
+    USER_NOT_LOGGED_IN = c.CKR_USER_NOT_LOGGED_IN,
+    USER_PIN_NOT_INITIALIZED = c.CKR_USER_PIN_NOT_INITIALIZED,
+    USER_TYPE_INVALID = c.CKR_USER_TYPE_INVALID,
+    USER_ANOTHER_ALREADY_LOGGED_IN = c.CKR_USER_ANOTHER_ALREADY_LOGGED_IN,
+    USER_TOO_MANY_TYPES = c.CKR_USER_TOO_MANY_TYPES,
+    WRAPPED_KEY_INVALID = c.CKR_WRAPPED_KEY_INVALID,
+    WRAPPED_KEY_LEN_RANGE = c.CKR_WRAPPED_KEY_LEN_RANGE,
+    WRAPPING_KEY_HANDLE_INVALID = c.CKR_WRAPPING_KEY_HANDLE_INVALID,
+    WRAPPING_KEY_SIZE_RANGE = c.CKR_WRAPPING_KEY_SIZE_RANGE,
+    WRAPPING_KEY_TYPE_INCONSISTENT = c.CKR_WRAPPING_KEY_TYPE_INCONSISTENT,
+    RANDOM_SEED_NOT_SUPPORTED = c.CKR_RANDOM_SEED_NOT_SUPPORTED,
+    RANDOM_NO_RNG = c.CKR_RANDOM_NO_RNG,
+    DOMAIN_PARAMS_INVALID = c.CKR_DOMAIN_PARAMS_INVALID,
+    CURVE_NOT_SUPPORTED = c.CKR_CURVE_NOT_SUPPORTED,
+    BUFFER_TOO_SMALL = c.CKR_BUFFER_TOO_SMALL,
+    SAVED_STATE_INVALID = c.CKR_SAVED_STATE_INVALID,
+    INFORMATION_SENSITIVE = c.CKR_INFORMATION_SENSITIVE,
+    STATE_UNSAVEABLE = c.CKR_STATE_UNSAVEABLE,
+    CRYPTOKI_NOT_INITIALIZED = c.CKR_CRYPTOKI_NOT_INITIALIZED,
+    CRYPTOKI_ALREADY_INITIALIZED = c.CKR_CRYPTOKI_ALREADY_INITIALIZED,
+    MUTEX_BAD = c.CKR_MUTEX_BAD,
+    MUTEX_NOT_LOCKED = c.CKR_MUTEX_NOT_LOCKED,
+    NEW_PIN_MODE = c.CKR_NEW_PIN_MODE,
+    NEXT_OTP = c.CKR_NEXT_OTP,
+    EXCEEDED_MAX_ITERATIONS = c.CKR_EXCEEDED_MAX_ITERATIONS,
+    FIPS_SELF_TEST_FAILED = c.CKR_FIPS_SELF_TEST_FAILED,
+    LIBRARY_LOAD_FAILED = c.CKR_LIBRARY_LOAD_FAILED,
+    PIN_TOO_WEAK = c.CKR_PIN_TOO_WEAK,
+    PUBLIC_KEY_INVALID = c.CKR_PUBLIC_KEY_INVALID,
+    FUNCTION_REJECTED = c.CKR_FUNCTION_REJECTED,
+    VENDOR_DEFINED = c.CKR_VENDOR_DEFINED,
 };
 
 fn returnIfError(rv: c_ulong) Error!void {
