@@ -5,10 +5,8 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const pkcs11 = b.dependency("pkcs11", .{
-        .target = target,
-        .optimize = optimize,
-    });
+    const pkcs11_headers = b.dependency("pkcs11", .{});
+    const pkcs11_header_path = pkcs11_headers.path("published/2-40-errata-1");
 
     const lib = b.addStaticLibrary(.{
         .name = "p11",
@@ -19,7 +17,7 @@ pub fn build(b: *std.Build) void {
 
     lib.linkLibC();
     lib.addIncludePath(.{ .path = "include" });
-    lib.addIncludePath(pkcs11.path("published/2-40-errata-1"));
+    lib.addIncludePath(pkcs11_header_path);
 
     b.installArtifact(lib);
 
@@ -36,7 +34,7 @@ pub fn build(b: *std.Build) void {
 
     lib_unit_tests.linkLibC();
     lib_unit_tests.addIncludePath(.{ .path = "include" });
-    lib_unit_tests.addIncludePath(pkcs11.path("published/2-40-errata-1"));
+    lib_unit_tests.addIncludePath(pkcs11_header_path);
     lib_unit_tests.root_module.addOptions("config", options);
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
