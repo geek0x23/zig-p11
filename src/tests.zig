@@ -3,14 +3,15 @@ const p11 = @import("p11");
 const std = @import("std");
 
 const testing = std.testing;
+const alloc = testing.allocator;
 
 test "it can load a PKCS#11 module." {
-    var mod = try p11.init(testing.allocator, config.module);
+    var mod = try p11.init(alloc, config.module);
     defer mod.deinit();
 }
 
 test "it can initialize and finalize the module." {
-    var mod = try p11.init(testing.allocator, config.module);
+    var mod = try p11.init(alloc, config.module);
     defer mod.deinit();
 
     try mod.initialize();
@@ -18,13 +19,13 @@ test "it can initialize and finalize the module." {
 }
 
 test "it can get all the infos" {
-    const allocator = testing.allocator;
-    var mod = try p11.init(allocator, config.module);
+    var mod = try p11.init(alloc, config.module);
     defer mod.deinit();
     try mod.initialize();
+    defer mod.finalize() catch {};
 
     const slots = try mod.getSlotList(true);
-    defer allocator.free(slots);
+    defer alloc.free(slots);
     try testing.expect(slots.len > 0);
     const slot = slots[0];
 
@@ -39,7 +40,7 @@ test "it can get all the infos" {
     try testing.expectStringStartsWith(&token_info.manufacturer_id, "SoftHSM");
 
     const mechs = try mod.getMechanismList(slot);
-    defer allocator.free(mechs);
+    defer alloc.free(mechs);
     try testing.expect(mechs.len > 0);
 
     var mech_info = try mod.getMechanismInfo(slot, p11.MechanismType.aes_cbc);
@@ -51,18 +52,24 @@ test "it can get all the infos" {
     try testing.expect(mech_info.flags.ec.named_curve);
     try testing.expect(mech_info.flags.ec.uncompress);
 
-    try mod.finalize();
+    var sess = try mod.openSession(slot, .{});
+    defer sess.deinit();
+    const sess_info = try sess.getSessionInfo();
+    try testing.expect(sess_info.state == p11.SessionState.read_write_public);
+    try testing.expect(sess_info.flags.read_write);
+    try testing.expect(sess_info.flags.serial);
+    try testing.expect(sess_info.slot_id == slot);
+    try testing.expect(sess_info.device_error == 0);
 }
 
 test "it can initialize a new token" {
-    const allocator = testing.allocator;
-    var mod = try p11.init(allocator, config.module);
+    var mod = try p11.init(alloc, config.module);
     defer mod.deinit();
     try mod.initialize();
     defer mod.finalize() catch {};
 
     const slots = try mod.getSlotList(true);
-    defer allocator.free(slots);
+    defer alloc.free(slots);
 
     // In SoftHSM, you init new tokens using the last slot.
     const slot = slots[slots.len - 1];
@@ -78,14 +85,13 @@ test "it can initialize a new token" {
 }
 
 test "it can open and close a session" {
-    const allocator = testing.allocator;
-    var mod = try p11.init(allocator, config.module);
+    var mod = try p11.init(alloc, config.module);
     defer mod.deinit();
     try mod.initialize();
     defer mod.finalize() catch {};
 
     const slots = try mod.getSlotList(true);
-    defer allocator.free(slots);
+    defer alloc.free(slots);
 
     const slot = slots[1];
     var sess = try mod.openSession(slot, .{});

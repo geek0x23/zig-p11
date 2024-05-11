@@ -359,19 +359,20 @@ pub const Module = struct {
     /// When a session is opened, the underlying handle is allocated.
     /// Caller must call Session.deinit to free memory.
     pub fn openSession(self: Module, slot_id: c_ulong, flags: SessionFlags) Error!Session {
-        var packed_flags: c_ulong = 0;
+        var c_flags: c_ulong = 0;
+
         if (flags.read_write) {
-            packed_flags = packed_flags | C.CKF_RW_SESSION;
+            c_flags = c_flags | C.CKF_RW_SESSION;
         }
         if (flags.serial) {
-            packed_flags = packed_flags | C.CKF_SERIAL_SESSION;
+            c_flags = c_flags | C.CKF_SERIAL_SESSION;
         }
 
         const handle = try self.allocator.create(C.CK_SESSION_HANDLE);
         errdefer self.allocator.destroy(handle);
 
         // We're *NOT* supporting Notify/Callback setups here on purpose.
-        const rv = self.ctx.sym.C_OpenSession.?(slot_id, packed_flags, null, null, handle);
+        const rv = self.ctx.sym.C_OpenSession.?(slot_id, c_flags, null, null, handle);
         try helpers.returnIfError(rv);
 
         return .{

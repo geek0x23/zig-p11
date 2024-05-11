@@ -70,7 +70,6 @@ pub const Session = struct {
 
     pub fn getSessionInfo(self: Session) Error!SessionInfo {
         var info: C.CK_SESSION_INFO = undefined;
-
         const rv = self.ctx.sym.C_GetSessionInfo.?(self.handle.*, &info);
         try helpers.returnIfError(rv);
 

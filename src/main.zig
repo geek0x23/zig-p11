@@ -5,6 +5,7 @@ const constants = @import("constants.zig");
 pub const Error = constants.Error;
 pub const MechanismType = constants.MechanismType;
 pub const UserType = constants.UserType;
+pub const SessionState = constants.SessionState;
 
 pub const Module = module.Module;
 pub const Info = module.Info;
