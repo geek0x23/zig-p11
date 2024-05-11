@@ -1,5 +1,6 @@
 const std = @import("std");
 const module = @import("module.zig");
+const session = @import("session.zig");
 const constants = @import("constants.zig");
 
 pub const Error = constants.Error;
@@ -16,6 +17,8 @@ pub const SlotFlags = module.SlotFlags;
 pub const TokenFlags = module.TokenFlags;
 pub const TokenInfo = module.TokenInfo;
 pub const Version = module.Version;
+
+pub const Session = session.Session;
 
 pub const init = Module.init;
 

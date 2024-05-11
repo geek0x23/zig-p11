@@ -3,18 +3,19 @@ const builtin = @import("builtin");
 const config = @import("config");
 const c = @import("pkcs11");
 const constants = @import("constants.zig");
+const helpers = @import("helpers.zig");
 
 const Allocator = std.mem.Allocator;
 const Error = constants.Error;
 const MechanismType = constants.MechanismType;
 const ReturnValue = constants.ReturnValue;
-const testing = std.testing;
+const Zigstr = @import("zigstr");
 
 pub const Version = struct {
     major: u8,
     minor: u8,
 
-    pub fn fromCType(version: c.CK_VERSION) Version {
+    fn fromCType(version: c.CK_VERSION) Version {
         return .{ .major = version.major, .minor = version.minor };
     }
 };
@@ -26,7 +27,7 @@ pub const SlotInfo = struct {
     hardware_version: Version,
     firmware_version: Version,
 
-    pub fn fromCType(info: c.CK_SLOT_INFO) SlotInfo {
+    fn fromCType(info: c.CK_SLOT_INFO) SlotInfo {
         return .{
             .description = info.slotDescription,
             .manufacturer_id = info.manufacturerID,
@@ -42,7 +43,7 @@ pub const SlotFlags = struct {
     removable_device: bool = false,
     hardware_slot: bool = false,
 
-    pub fn fromCType(flags: c.CK_FLAGS) SlotFlags {
+    fn fromCType(flags: c.CK_FLAGS) SlotFlags {
         return .{
             .hardware_slot = (flags & c.CKF_HW_SLOT) == c.CKF_HW_SLOT,
             .removable_device = (flags & c.CKF_REMOVABLE_DEVICE) == c.CKF_REMOVABLE_DEVICE,
@@ -59,7 +60,7 @@ pub const Info = struct {
     library_description: [32]u8,
     library_version: Version,
 
-    pub fn fromCType(info: c.CK_INFO) Info {
+    fn fromCType(info: c.CK_INFO) Info {
         return .{
             .manufacturer_id = info.manufacturerID,
             .library_description = info.libraryDescription,
@@ -89,7 +90,7 @@ pub const TokenInfo = struct {
     firmware_version: Version,
     utc_time: [16]u8,
 
-    pub fn fromCType(info: c.CK_TOKEN_INFO) TokenInfo {
+    fn fromCType(info: c.CK_TOKEN_INFO) TokenInfo {
         return .{
             .label = info.label,
             .manufacturer_id = info.manufacturerID,
@@ -134,7 +135,7 @@ pub const TokenFlags = struct {
     so_pin_to_be_changed: bool = false,
     error_state: bool = false,
 
-    pub fn fromCType(flags: c.CK_FLAGS) TokenFlags {
+    fn fromCType(flags: c.CK_FLAGS) TokenFlags {
         return .{
             .rng = (flags & c.CKF_RNG) == c.CKF_RNG,
             .write_protected = (flags & c.CKF_WRITE_PROTECTED) == c.CKF_WRITE_PROTECTED,
@@ -164,7 +165,7 @@ pub const MechanismInfo = struct {
     max_key_size: c_ulong,
     flags: MechanismFlags,
 
-    pub fn fromCType(info: c.CK_MECHANISM_INFO) MechanismInfo {
+    fn fromCType(info: c.CK_MECHANISM_INFO) MechanismInfo {
         return .{
             .min_key_size = info.ulMinKeySize,
             .max_key_size = info.ulMaxKeySize,
@@ -190,7 +191,7 @@ pub const MechanismFlags = struct {
     ec: MechanismECFlags,
     extension: bool = false,
 
-    pub fn fromCType(flags: c.CK_FLAGS) MechanismFlags {
+    fn fromCType(flags: c.CK_FLAGS) MechanismFlags {
         return .{
             .hardware = (flags & c.CKF_HW) == c.CKF_HW,
             .encrypt = (flags & c.CKF_ENCRYPT) == c.CKF_ENCRYPT,
@@ -219,7 +220,7 @@ pub const MechanismECFlags = struct {
     uncompress: bool = false,
     compress: bool = false,
 
-    pub fn fromCType(flags: c.CK_FLAGS) MechanismECFlags {
+    fn fromCType(flags: c.CK_FLAGS) MechanismECFlags {
         return .{
             .f_p = (flags & c.CKF_EC_F_P) == c.CKF_EC_F_P,
             .f_2m = (flags & c.CKF_EC_F_2M) == c.CKF_EC_F_2M,
@@ -250,7 +251,7 @@ pub const Module = struct {
 
         const getFunctionList = lib.lookup(c.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
         const rv = getFunctionList(@ptrCast(&context.sym));
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
 
         return .{ .allocator = alloc, .ctx = context };
     }
@@ -265,20 +266,20 @@ pub const Module = struct {
     pub fn initialize(self: Module) Error!void {
         var args: c.CK_C_INITIALIZE_ARGS = .{ .flags = c.CKF_OS_LOCKING_OK };
         const rv = self.ctx.sym.C_Initialize.?(&args);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
     }
 
     pub fn finalize(self: Module) Error!void {
         const args: c.CK_VOID_PTR = null;
         const rv = self.ctx.sym.C_Finalize.?(args);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
     }
 
     /// Caller owns returned memory.
     pub fn getInfo(self: Module) Error!Info {
         var info: c.CK_INFO = undefined;
         const rv = self.ctx.sym.C_GetInfo.?(&info);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
 
         return Info.fromCType(info);
     }
@@ -289,11 +290,11 @@ pub const Module = struct {
         var slot_count: c.CK_ULONG = undefined;
 
         var rv = self.ctx.sym.C_GetSlotList.?(present, null, &slot_count);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
 
         const slot_list = try self.allocator.alloc(c.CK_ULONG, slot_count);
         rv = self.ctx.sym.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
 
         return slot_list;
     }
@@ -301,7 +302,7 @@ pub const Module = struct {
     pub fn getSlotInfo(self: Module, slot_id: c_ulong) Error!SlotInfo {
         var slot_info: c.CK_SLOT_INFO = undefined;
         const rv = self.ctx.sym.C_GetSlotInfo.?(slot_id, &slot_info);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
 
         return SlotInfo.fromCType(slot_info);
     }
@@ -309,7 +310,7 @@ pub const Module = struct {
     pub fn getTokenInfo(self: Module, slot_id: c_ulong) Error!TokenInfo {
         var token_info: c.CK_TOKEN_INFO = undefined;
         const rv = self.ctx.sym.C_GetTokenInfo.?(slot_id, &token_info);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
 
         return TokenInfo.fromCType(token_info);
     }
@@ -319,11 +320,11 @@ pub const Module = struct {
         var mech_count: c.CK_ULONG = undefined;
 
         var rv = self.ctx.sym.C_GetMechanismList.?(slot_id, null, &mech_count);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
 
         const mech_list = try self.allocator.alloc(MechanismType, mech_count);
         rv = self.ctx.sym.C_GetMechanismList.?(slot_id, @ptrCast(mech_list.ptr), &mech_count);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
 
         return mech_list;
     }
@@ -331,64 +332,84 @@ pub const Module = struct {
     pub fn getMechanismInfo(self: Module, slot_id: c_ulong, mech_type: MechanismType) Error!MechanismInfo {
         var mech_info: c.CK_MECHANISM_INFO = undefined;
         const rv = self.ctx.sym.C_GetMechanismInfo.?(slot_id, @intFromEnum(mech_type), &mech_info);
-        try returnIfError(rv);
+        try helpers.returnIfError(rv);
 
         return MechanismInfo.fromCType(mech_info);
     }
+
+    pub fn initToken(self: Module, slot_id: c_ulong, pin: []const u8, label: []const u8) Error!void {
+        var padded_label = [_]u8{0x20} ** 32;
+        const n = @min(padded_label.len, label.len);
+        for (0..n) |i| {
+            padded_label[i] = label[i];
+        }
+
+        const rv = self.ctx.sym.C_InitToken.?(slot_id, @constCast(pin.ptr), pin.len, &padded_label);
+        try helpers.returnIfError(rv);
+    }
 };
 
-fn returnIfError(rv: c_ulong) Error!void {
-    const result: ReturnValue = @enumFromInt(rv);
-    if (result != ReturnValue.ok) {
-        return result.toError();
-    }
+const testing = std.testing;
+
+test "it can load a PKCS#11 module." {
+    var mod = try Module.init(testing.allocator, config.module);
+    defer mod.deinit();
 }
 
-test "it can load a PKCS#11 library." {
-    var token = try Module.init(testing.allocator, config.module);
-    defer token.deinit();
-}
+test "it can initialize and finalize the module." {
+    var mod = try Module.init(testing.allocator, config.module);
+    defer mod.deinit();
 
-test "it can initialize and finalize the token." {
-    var token = try Module.init(testing.allocator, config.module);
-    defer token.deinit();
-
-    try token.initialize();
-    try token.finalize();
+    try mod.initialize();
+    try mod.finalize();
 }
 
 test "it can get all the infos" {
     const allocator = testing.allocator;
-    var token = try Module.init(allocator, config.module);
+    var mod = try Module.init(allocator, config.module);
+    defer mod.deinit();
+    try mod.initialize();
 
-    defer token.deinit();
-    try token.initialize();
-
-    const slots = try token.getSlotList(true);
+    const slots = try mod.getSlotList(true);
     defer allocator.free(slots);
     try testing.expect(slots.len > 0);
     const slot = slots[0];
 
-    const slot_info = try token.getSlotInfo(slot);
+    const slot_info = try mod.getSlotInfo(slot);
     try testing.expectStringStartsWith(&slot_info.description, "SoftHSM");
     try testing.expect(slot_info.flags.token_present);
 
-    const info = try token.getInfo();
+    const info = try mod.getInfo();
     try testing.expectStringStartsWith(&info.manufacturer_id, "SoftHSM");
 
-    const token_info = try token.getTokenInfo(slot);
+    const token_info = try mod.getTokenInfo(slot);
     try testing.expectStringStartsWith(&token_info.manufacturer_id, "SoftHSM");
 
-    const mechs = try token.getMechanismList(slot);
+    const mechs = try mod.getMechanismList(slot);
     defer allocator.free(mechs);
     try testing.expect(mechs.len > 0);
 
-    var mech_info = try token.getMechanismInfo(slot, MechanismType.aes_cbc);
+    var mech_info = try mod.getMechanismInfo(slot, MechanismType.aes_cbc);
     try testing.expect(mech_info.flags.encrypt);
     try testing.expect(mech_info.flags.decrypt);
 
-    mech_info = try token.getMechanismInfo(slot, MechanismType.ec_key_pair_gen);
+    mech_info = try mod.getMechanismInfo(slot, MechanismType.ec_key_pair_gen);
     try testing.expect(mech_info.flags.generate_key_pair);
     try testing.expect(mech_info.flags.ec.named_curve);
     try testing.expect(mech_info.flags.ec.uncompress);
+
+    try mod.finalize();
+}
+
+test "it can initialize a new token" {
+    const allocator = testing.allocator;
+    var mod = try Module.init(allocator, config.module);
+    defer mod.deinit();
+    try mod.initialize();
+
+    const slots = try mod.getSlotList(true);
+    defer allocator.free(slots);
+
+    // In SoftHSM, the SlotID of the main slot is always slots.len - 1.
+    try mod.initToken(slots.len - 1, "1234", "my label");
 }
