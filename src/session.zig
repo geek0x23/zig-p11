@@ -45,4 +45,9 @@ pub const Session = struct {
         const rv = self.ctx.sym.C_Login.?(self.handle.*, @intFromEnum(user_type), @constCast(pin.ptr), pin.len);
         try helpers.returnIfError(rv);
     }
+
+    pub fn logout(self: Session) Error!void {
+        const rv = self.ctx.sym.C_Logout.?(self.handle.*);
+        try helpers.returnIfError(rv);
+    }
 };

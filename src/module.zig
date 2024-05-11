@@ -247,6 +247,7 @@ pub const Module = struct {
         var lib = try std.DynLib.open(path);
 
         const context = try alloc.create(Context);
+        errdefer alloc.destroy(context);
         context.lib = lib;
 
         const getFunctionList = lib.lookup(c.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
@@ -293,6 +294,8 @@ pub const Module = struct {
         try helpers.returnIfError(rv);
 
         const slot_list = try self.allocator.alloc(c.CK_ULONG, slot_count);
+        errdefer self.allocator.free(slot_list);
+
         rv = self.ctx.sym.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
         try helpers.returnIfError(rv);
 
@@ -323,6 +326,8 @@ pub const Module = struct {
         try helpers.returnIfError(rv);
 
         const mech_list = try self.allocator.alloc(MechanismType, mech_count);
+        errdefer self.allocator.free(mech_list);
+
         rv = self.ctx.sym.C_GetMechanismList.?(slot_id, @ptrCast(mech_list.ptr), &mech_count);
         try helpers.returnIfError(rv);
 
@@ -362,8 +367,10 @@ pub const Module = struct {
             packed_flags = packed_flags | c.CKF_SERIAL_SESSION;
         }
 
-        // We're *NOT* supporting Notify/Callback setups here on purpose.
         const handle = try self.allocator.create(c.CK_SESSION_HANDLE);
+        errdefer self.allocator.destroy(handle);
+
+        // We're *NOT* supporting Notify/Callback setups here on purpose.
         const rv = self.ctx.sym.C_OpenSession.?(slot_id, packed_flags, null, null, handle);
         try helpers.returnIfError(rv);
 
@@ -452,6 +459,7 @@ test "it can initialize a new token" {
 
     try sess.login(UserType.system_operator, "1234");
     try sess.initPIN("4321");
+    try sess.logout();
 }
 
 test "it can open and close a session" {
