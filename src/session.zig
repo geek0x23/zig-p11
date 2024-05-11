@@ -7,7 +7,24 @@ const Allocator = std.mem.Allocator;
 const c = pkcs11.c;
 const Context = pkcs11.Context;
 const Error = constants.Error;
+const SessionState = constants.SessionState;
 const UserType = constants.UserType;
+
+pub const SessionInfo = struct {
+    slot_id: c_ulong,
+    state: SessionState,
+    flags: SessionFlags,
+    device_error: c_ulong,
+
+    fn fromCType(info: c.CK_SESSION_INFO) SessionInfo {
+        return .{
+            .slot_id = info.slotID,
+            .state = @enumFromInt(info.state),
+            .flags = SessionFlags.fromCType(info.flags),
+            .device_error = info.ulDeviceError,
+        };
+    }
+};
 
 pub const SessionFlags = struct {
     read_write: bool = true,
@@ -49,5 +66,14 @@ pub const Session = struct {
     pub fn logout(self: Session) Error!void {
         const rv = self.ctx.sym.C_Logout.?(self.handle.*);
         try helpers.returnIfError(rv);
+    }
+
+    pub fn getSessionInfo(self: Session) Error!SessionInfo {
+        var info: c.CK_SESSION_INFO = undefined;
+
+        const rv = self.ctx.sym.C_GetSessionInfo.?(self.handle.*, &info);
+        try helpers.returnIfError(rv);
+
+        return SessionInfo.fromCType(info);
     }
 };

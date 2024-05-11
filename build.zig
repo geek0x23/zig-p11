@@ -20,22 +20,19 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
-    p11.addOptions("config", options);
     p11.addIncludePath(pkcs11_header_path);
     p11.addIncludePath(b.path("include"));
 
     // Tests
     const tests = b.addTest(.{
         .name = "p11-tests",
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("src/tests.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    tests.linkLibC();
     tests.root_module.addOptions("config", options);
-    tests.root_module.addIncludePath(pkcs11_header_path);
-    tests.root_module.addIncludePath(b.path("include"));
+    tests.root_module.addImport("p11", p11);
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");

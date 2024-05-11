@@ -1,6 +1,8 @@
 # zig-p11
 
-This project is for me to play around and learn zig while doing something more productive than just a simple "Hello, World!" application.  Maybe someday this library will be usable, but probably not.
+This project is a Zig module for PKCS#11.  PKCS#11 is wrapped with a thin layer that brings the interface closer to idiomatic Zig.
+
+For now this exists for me to play around and learn zig while doing something more productive than just a simple "Hello, World!" application.  Maybe someday this library will be usable, but probably not.
 
 ## SoftHSM2
 

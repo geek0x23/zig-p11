@@ -1,4 +1,3 @@
-const std = @import("std");
 const module = @import("module.zig");
 const session = @import("session.zig");
 const constants = @import("constants.zig");
@@ -20,9 +19,6 @@ pub const Version = module.Version;
 
 pub const Session = session.Session;
 pub const SessionFlags = session.SessionFlags;
+pub const SessionInfo = session.SessionInfo;
 
 pub const init = Module.init;
-
-test {
-    std.testing.refAllDecls(@This());
-}

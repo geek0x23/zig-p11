@@ -732,3 +732,11 @@ pub const UserType = enum(c_ulong) {
     user = c.CKU_USER,
     context_specific = c.CKU_CONTEXT_SPECIFIC,
 };
+
+pub const SessionState = enum(c_ulong) {
+    read_only_public = c.CKS_RO_PUBLIC_SESSION,
+    read_only_user_functions = c.CKS_RO_USER_FUNCTIONS,
+    read_write_public = c.CKS_RW_PUBLIC_SESSION,
+    read_write_user_functions = c.CKS_RW_USER_FUNCTIONS,
+    read_write_system_operator_functions = c.CKS_RW_SO_FUNCTIONS,
+};
