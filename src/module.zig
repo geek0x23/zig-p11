@@ -14,6 +14,7 @@ const MechanismType = constants.MechanismType;
 const ReturnValue = constants.ReturnValue;
 const Session = session.Session;
 const SessionFlags = session.SessionFlags;
+const UserType = constants.UserType;
 
 pub const Version = struct {
     major: u8,
@@ -351,7 +352,7 @@ pub const Module = struct {
     }
 
     /// When a session is opened, the underlying handle is allocated.
-    /// Caller must call Session.close() to free memory.
+    /// Caller must call Session.deinit to free memory.
     pub fn openSession(self: Module, slot_id: c_ulong, flags: SessionFlags) Error!Session {
         var packed_flags: c_ulong = 0;
         if (flags.read_write) {
@@ -441,10 +442,16 @@ test "it can initialize a new token" {
     const slots = try mod.getSlotList(true);
     defer allocator.free(slots);
 
-    const slot = slots.len - 1;
+    // In SoftHSM, you init new tokens using the last slot.
+    const slot = slots[slots.len - 1];
 
-    // In SoftHSM, the SlotID of the main slot is always slots.len - 1.
     try mod.initToken(slot, "1234", "zig-p11");
+
+    var sess = try mod.openSession(slot, .{});
+    defer sess.deinit();
+
+    try sess.login(UserType.system_operator, "1234");
+    try sess.initPIN("4321");
 }
 
 test "it can open and close a session" {
@@ -458,10 +465,11 @@ test "it can open and close a session" {
     defer allocator.free(slots);
 
     const slot = slots[1];
-    var sess = try mod.openSession(slot, .{ .serial = true });
+    var sess = try mod.openSession(slot, .{});
+    defer sess.deinit();
     try sess.close();
 
-    var sess2 = try mod.openSession(slot, .{ .serial = true });
+    var sess2 = try mod.openSession(slot, .{});
     defer sess2.deinit();
     try mod.closeAllSessions(slot);
 }
