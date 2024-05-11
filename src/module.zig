@@ -1,15 +1,19 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const config = @import("config");
-const c = @import("pkcs11");
+const pkcs11 = @import("pkcs11.zig");
 const constants = @import("constants.zig");
 const helpers = @import("helpers.zig");
+const session = @import("session.zig");
 
+const c = pkcs11.c;
 const Allocator = std.mem.Allocator;
+const Context = pkcs11.Context;
 const Error = constants.Error;
 const MechanismType = constants.MechanismType;
 const ReturnValue = constants.ReturnValue;
-const Zigstr = @import("zigstr");
+const Session = session.Session;
+const SessionFlags = session.SessionFlags;
 
 pub const Version = struct {
     major: u8,
@@ -232,11 +236,6 @@ pub const MechanismECFlags = struct {
     }
 };
 
-const Context = struct {
-    lib: std.DynLib,
-    sym: *c.CK_FUNCTION_LIST,
-};
-
 pub const Module = struct {
     ctx: *Context,
     allocator: Allocator,
@@ -337,14 +336,45 @@ pub const Module = struct {
         return MechanismInfo.fromCType(mech_info);
     }
 
+    /// Per the PKCS#11 Spec:
+    ///  - If label is more than 32 bytes, it will be truncated.
+    ///  - If label is less than 32 bytes, it will be padded with spaces.
     pub fn initToken(self: Module, slot_id: c_ulong, pin: []const u8, label: []const u8) Error!void {
-        var padded_label = [_]u8{0x20} ** 32;
+        var padded_label = [_:0]u8{0x20} ** 32;
         const n = @min(padded_label.len, label.len);
         for (0..n) |i| {
             padded_label[i] = label[i];
         }
 
         const rv = self.ctx.sym.C_InitToken.?(slot_id, @constCast(pin.ptr), pin.len, &padded_label);
+        try helpers.returnIfError(rv);
+    }
+
+    /// When a session is opened, the underlying handle is allocated.
+    /// Caller must call Session.close() to free memory.
+    pub fn openSession(self: Module, slot_id: c_ulong, flags: SessionFlags) Error!Session {
+        var packed_flags: c_ulong = 0;
+        if (flags.read_write) {
+            packed_flags = packed_flags | c.CKF_RW_SESSION;
+        }
+        if (flags.serial) {
+            packed_flags = packed_flags | c.CKF_SERIAL_SESSION;
+        }
+
+        // We're *NOT* supporting Notify/Callback setups here on purpose.
+        const handle = try self.allocator.create(c.CK_SESSION_HANDLE);
+        const rv = self.ctx.sym.C_OpenSession.?(slot_id, packed_flags, null, null, handle);
+        try helpers.returnIfError(rv);
+
+        return .{
+            .handle = handle,
+            .allocator = self.allocator,
+            .ctx = self.ctx,
+        };
+    }
+
+    pub fn closeAllSessions(self: Module, slot_id: c_ulong) Error!void {
+        const rv = self.ctx.sym.C_CloseAllSessions.?(slot_id);
         try helpers.returnIfError(rv);
     }
 };
@@ -406,10 +436,32 @@ test "it can initialize a new token" {
     var mod = try Module.init(allocator, config.module);
     defer mod.deinit();
     try mod.initialize();
+    defer mod.finalize() catch {};
 
     const slots = try mod.getSlotList(true);
     defer allocator.free(slots);
 
+    const slot = slots.len - 1;
+
     // In SoftHSM, the SlotID of the main slot is always slots.len - 1.
-    try mod.initToken(slots.len - 1, "1234", "my label");
+    try mod.initToken(slot, "1234", "zig-p11");
+}
+
+test "it can open and close a session" {
+    const allocator = testing.allocator;
+    var mod = try Module.init(allocator, config.module);
+    defer mod.deinit();
+    try mod.initialize();
+    defer mod.finalize() catch {};
+
+    const slots = try mod.getSlotList(true);
+    defer allocator.free(slots);
+
+    const slot = slots[1];
+    var sess = try mod.openSession(slot, .{ .serial = true });
+    try sess.close();
+
+    var sess2 = try mod.openSession(slot, .{ .serial = true });
+    defer sess2.deinit();
+    try mod.closeAllSessions(slot);
 }

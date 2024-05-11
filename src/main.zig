@@ -19,6 +19,7 @@ pub const TokenInfo = module.TokenInfo;
 pub const Version = module.Version;
 
 pub const Session = session.Session;
+pub const SessionFlags = session.SessionFlags;
 
 pub const init = Module.init;
 

@@ -1,4 +1,4 @@
-const c = @import("pkcs11");
+const c = @import("pkcs11.zig").c;
 
 pub const Error = error{
     // PKCS#11 Errors
