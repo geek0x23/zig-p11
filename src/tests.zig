@@ -2,21 +2,15 @@ const config = @import("config");
 const p11 = @import("p11");
 const std = @import("std");
 
-const Module = p11.Module;
-
-test {
-    std.testing.refAllDecls(@This());
-}
-
 const testing = std.testing;
 
 test "it can load a PKCS#11 module." {
-    var mod = try Module.init(testing.allocator, config.module);
+    var mod = try p11.init(testing.allocator, config.module);
     defer mod.deinit();
 }
 
 test "it can initialize and finalize the module." {
-    var mod = try Module.init(testing.allocator, config.module);
+    var mod = try p11.init(testing.allocator, config.module);
     defer mod.deinit();
 
     try mod.initialize();
@@ -25,7 +19,7 @@ test "it can initialize and finalize the module." {
 
 test "it can get all the infos" {
     const allocator = testing.allocator;
-    var mod = try Module.init(allocator, config.module);
+    var mod = try p11.init(allocator, config.module);
     defer mod.deinit();
     try mod.initialize();
 
@@ -62,7 +56,7 @@ test "it can get all the infos" {
 
 test "it can initialize a new token" {
     const allocator = testing.allocator;
-    var mod = try Module.init(allocator, config.module);
+    var mod = try p11.init(allocator, config.module);
     defer mod.deinit();
     try mod.initialize();
     defer mod.finalize() catch {};
@@ -85,7 +79,7 @@ test "it can initialize a new token" {
 
 test "it can open and close a session" {
     const allocator = testing.allocator;
-    var mod = try Module.init(allocator, config.module);
+    var mod = try p11.init(allocator, config.module);
     defer mod.deinit();
     try mod.initialize();
     defer mod.finalize() catch {};
