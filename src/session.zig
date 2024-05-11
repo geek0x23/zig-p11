@@ -4,7 +4,7 @@ const helpers = @import("helpers.zig");
 const pkcs11 = @import("pkcs11.zig");
 
 const Allocator = std.mem.Allocator;
-const c = pkcs11.c;
+const C = pkcs11.C;
 const Context = pkcs11.Context;
 const Error = constants.Error;
 const SessionState = constants.SessionState;
@@ -16,7 +16,7 @@ pub const SessionInfo = struct {
     flags: SessionFlags,
     device_error: c_ulong,
 
-    fn fromCType(info: c.CK_SESSION_INFO) SessionInfo {
+    fn fromCType(info: C.CK_SESSION_INFO) SessionInfo {
         return .{
             .slot_id = info.slotID,
             .state = @enumFromInt(info.state),
@@ -30,16 +30,16 @@ pub const SessionFlags = struct {
     read_write: bool = true,
     serial: bool = true,
 
-    fn fromCType(flags: c.CK_FLAGS) SessionFlags {
+    fn fromCType(flags: C.CK_FLAGS) SessionFlags {
         return .{
-            .read_write = (flags & c.CKF_RW_SESSION) == c.CKF_RW_SESSION,
-            .serial = (flags & c.CKF_SERIAL_SESSION) == c.CKF_SERIAL_SESSION,
+            .read_write = (flags & C.CKF_RW_SESSION) == C.CKF_RW_SESSION,
+            .serial = (flags & C.CKF_SERIAL_SESSION) == C.CKF_SERIAL_SESSION,
         };
     }
 };
 
 pub const Session = struct {
-    handle: *c.CK_SESSION_HANDLE,
+    handle: *C.CK_SESSION_HANDLE,
     ctx: *Context,
     allocator: Allocator,
 
@@ -69,7 +69,7 @@ pub const Session = struct {
     }
 
     pub fn getSessionInfo(self: Session) Error!SessionInfo {
-        var info: c.CK_SESSION_INFO = undefined;
+        var info: C.CK_SESSION_INFO = undefined;
 
         const rv = self.ctx.sym.C_GetSessionInfo.?(self.handle.*, &info);
         try helpers.returnIfError(rv);

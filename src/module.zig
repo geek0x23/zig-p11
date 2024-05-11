@@ -6,7 +6,7 @@ const constants = @import("constants.zig");
 const helpers = @import("helpers.zig");
 const session = @import("session.zig");
 
-const c = pkcs11.c;
+const C = pkcs11.C;
 const Allocator = std.mem.Allocator;
 const Context = pkcs11.Context;
 const Error = constants.Error;
@@ -20,7 +20,7 @@ pub const Version = struct {
     major: u8,
     minor: u8,
 
-    fn fromCType(version: c.CK_VERSION) Version {
+    fn fromCType(version: C.CK_VERSION) Version {
         return .{ .major = version.major, .minor = version.minor };
     }
 };
@@ -32,7 +32,7 @@ pub const SlotInfo = struct {
     hardware_version: Version,
     firmware_version: Version,
 
-    fn fromCType(info: c.CK_SLOT_INFO) SlotInfo {
+    fn fromCType(info: C.CK_SLOT_INFO) SlotInfo {
         return .{
             .description = info.slotDescription,
             .manufacturer_id = info.manufacturerID,
@@ -48,11 +48,11 @@ pub const SlotFlags = struct {
     removable_device: bool = false,
     hardware_slot: bool = false,
 
-    fn fromCType(flags: c.CK_FLAGS) SlotFlags {
+    fn fromCType(flags: C.CK_FLAGS) SlotFlags {
         return .{
-            .hardware_slot = (flags & c.CKF_HW_SLOT) == c.CKF_HW_SLOT,
-            .removable_device = (flags & c.CKF_REMOVABLE_DEVICE) == c.CKF_REMOVABLE_DEVICE,
-            .token_present = (flags & c.CKF_TOKEN_PRESENT) == c.CKF_TOKEN_PRESENT,
+            .hardware_slot = (flags & C.CKF_HW_SLOT) == C.CKF_HW_SLOT,
+            .removable_device = (flags & C.CKF_REMOVABLE_DEVICE) == C.CKF_REMOVABLE_DEVICE,
+            .token_present = (flags & C.CKF_TOKEN_PRESENT) == C.CKF_TOKEN_PRESENT,
         };
     }
 };
@@ -65,7 +65,7 @@ pub const Info = struct {
     library_description: [32]u8,
     library_version: Version,
 
-    fn fromCType(info: c.CK_INFO) Info {
+    fn fromCType(info: C.CK_INFO) Info {
         return .{
             .manufacturer_id = info.manufacturerID,
             .library_description = info.libraryDescription,
@@ -95,7 +95,7 @@ pub const TokenInfo = struct {
     firmware_version: Version,
     utc_time: [16]u8,
 
-    fn fromCType(info: c.CK_TOKEN_INFO) TokenInfo {
+    fn fromCType(info: C.CK_TOKEN_INFO) TokenInfo {
         return .{
             .label = info.label,
             .manufacturer_id = info.manufacturerID,
@@ -140,27 +140,27 @@ pub const TokenFlags = struct {
     so_pin_to_be_changed: bool = false,
     error_state: bool = false,
 
-    fn fromCType(flags: c.CK_FLAGS) TokenFlags {
+    fn fromCType(flags: C.CK_FLAGS) TokenFlags {
         return .{
-            .rng = (flags & c.CKF_RNG) == c.CKF_RNG,
-            .write_protected = (flags & c.CKF_WRITE_PROTECTED) == c.CKF_WRITE_PROTECTED,
-            .login_required = (flags & c.CKF_LOGIN_REQUIRED) == c.CKF_LOGIN_REQUIRED,
-            .user_pin_initialized = (flags & c.CKF_USER_PIN_INITIALIZED) == c.CKF_USER_PIN_INITIALIZED,
-            .restore_key_not_needed = (flags & c.CKF_RESTORE_KEY_NOT_NEEDED) == c.CKF_RESTORE_KEY_NOT_NEEDED,
-            .clock_on_token = (flags & c.CKF_CLOCK_ON_TOKEN) == c.CKF_CLOCK_ON_TOKEN,
-            .protected_authentication_path = (flags & c.CKF_PROTECTED_AUTHENTICATION_PATH) == c.CKF_PROTECTED_AUTHENTICATION_PATH,
-            .dual_crypto_operations = (flags & c.CKF_DUAL_CRYPTO_OPERATIONS) == c.CKF_DUAL_CRYPTO_OPERATIONS,
-            .token_initialized = (flags & c.CKF_TOKEN_INITIALIZED) == c.CKF_TOKEN_INITIALIZED,
-            .secondary_authentication = (flags & c.CKF_SECONDARY_AUTHENTICATION) == c.CKF_SECONDARY_AUTHENTICATION,
-            .user_pin_count_low = (flags & c.CKF_USER_PIN_COUNT_LOW) == c.CKF_USER_PIN_COUNT_LOW,
-            .user_pin_final_try = (flags & c.CKF_USER_PIN_FINAL_TRY) == c.CKF_USER_PIN_FINAL_TRY,
-            .user_pin_locked = (flags & c.CKF_USER_PIN_LOCKED) == c.CKF_USER_PIN_LOCKED,
-            .user_pin_to_be_changed = (flags & c.CKF_USER_PIN_TO_BE_CHANGED) == c.CKF_USER_PIN_TO_BE_CHANGED,
-            .so_pin_count_low = (flags & c.CKF_SO_PIN_COUNT_LOW) == c.CKF_SO_PIN_COUNT_LOW,
-            .so_pin_final_try = (flags & c.CKF_SO_PIN_FINAL_TRY) == c.CKF_SO_PIN_FINAL_TRY,
-            .so_pin_locked = (flags & c.CKF_SO_PIN_LOCKED) == c.CKF_SO_PIN_LOCKED,
-            .so_pin_to_be_changed = (flags & c.CKF_SO_PIN_TO_BE_CHANGED) == c.CKF_SO_PIN_TO_BE_CHANGED,
-            .error_state = (flags & c.CKF_ERROR_STATE) == c.CKF_ERROR_STATE,
+            .rng = (flags & C.CKF_RNG) == C.CKF_RNG,
+            .write_protected = (flags & C.CKF_WRITE_PROTECTED) == C.CKF_WRITE_PROTECTED,
+            .login_required = (flags & C.CKF_LOGIN_REQUIRED) == C.CKF_LOGIN_REQUIRED,
+            .user_pin_initialized = (flags & C.CKF_USER_PIN_INITIALIZED) == C.CKF_USER_PIN_INITIALIZED,
+            .restore_key_not_needed = (flags & C.CKF_RESTORE_KEY_NOT_NEEDED) == C.CKF_RESTORE_KEY_NOT_NEEDED,
+            .clock_on_token = (flags & C.CKF_CLOCK_ON_TOKEN) == C.CKF_CLOCK_ON_TOKEN,
+            .protected_authentication_path = (flags & C.CKF_PROTECTED_AUTHENTICATION_PATH) == C.CKF_PROTECTED_AUTHENTICATION_PATH,
+            .dual_crypto_operations = (flags & C.CKF_DUAL_CRYPTO_OPERATIONS) == C.CKF_DUAL_CRYPTO_OPERATIONS,
+            .token_initialized = (flags & C.CKF_TOKEN_INITIALIZED) == C.CKF_TOKEN_INITIALIZED,
+            .secondary_authentication = (flags & C.CKF_SECONDARY_AUTHENTICATION) == C.CKF_SECONDARY_AUTHENTICATION,
+            .user_pin_count_low = (flags & C.CKF_USER_PIN_COUNT_LOW) == C.CKF_USER_PIN_COUNT_LOW,
+            .user_pin_final_try = (flags & C.CKF_USER_PIN_FINAL_TRY) == C.CKF_USER_PIN_FINAL_TRY,
+            .user_pin_locked = (flags & C.CKF_USER_PIN_LOCKED) == C.CKF_USER_PIN_LOCKED,
+            .user_pin_to_be_changed = (flags & C.CKF_USER_PIN_TO_BE_CHANGED) == C.CKF_USER_PIN_TO_BE_CHANGED,
+            .so_pin_count_low = (flags & C.CKF_SO_PIN_COUNT_LOW) == C.CKF_SO_PIN_COUNT_LOW,
+            .so_pin_final_try = (flags & C.CKF_SO_PIN_FINAL_TRY) == C.CKF_SO_PIN_FINAL_TRY,
+            .so_pin_locked = (flags & C.CKF_SO_PIN_LOCKED) == C.CKF_SO_PIN_LOCKED,
+            .so_pin_to_be_changed = (flags & C.CKF_SO_PIN_TO_BE_CHANGED) == C.CKF_SO_PIN_TO_BE_CHANGED,
+            .error_state = (flags & C.CKF_ERROR_STATE) == C.CKF_ERROR_STATE,
         };
     }
 };
@@ -170,7 +170,7 @@ pub const MechanismInfo = struct {
     max_key_size: c_ulong,
     flags: MechanismFlags,
 
-    fn fromCType(info: c.CK_MECHANISM_INFO) MechanismInfo {
+    fn fromCType(info: C.CK_MECHANISM_INFO) MechanismInfo {
         return .{
             .min_key_size = info.ulMinKeySize,
             .max_key_size = info.ulMaxKeySize,
@@ -196,23 +196,23 @@ pub const MechanismFlags = struct {
     ec: MechanismECFlags,
     extension: bool = false,
 
-    fn fromCType(flags: c.CK_FLAGS) MechanismFlags {
+    fn fromCType(flags: C.CK_FLAGS) MechanismFlags {
         return .{
-            .hardware = (flags & c.CKF_HW) == c.CKF_HW,
-            .encrypt = (flags & c.CKF_ENCRYPT) == c.CKF_ENCRYPT,
-            .decrypt = (flags & c.CKF_DECRYPT) == c.CKF_DECRYPT,
-            .digest = (flags & c.CKF_DIGEST) == c.CKF_DIGEST,
-            .sign = (flags & c.CKF_SIGN) == c.CKF_SIGN,
-            .sign_with_recovery = (flags & c.CKF_SIGN_RECOVER) == c.CKF_SIGN_RECOVER,
-            .verify = (flags & c.CKF_VERIFY) == c.CKF_VERIFY,
-            .verify_with_recovery = (flags & c.CKF_VERIFY_RECOVER) == c.CKF_VERIFY_RECOVER,
-            .generate = (flags & c.CKF_GENERATE) == c.CKF_GENERATE,
-            .generate_key_pair = (flags & c.CKF_GENERATE_KEY_PAIR) == c.CKF_GENERATE_KEY_PAIR,
-            .wrap = (flags & c.CKF_WRAP) == c.CKF_WRAP,
-            .unwrap = (flags & c.CKF_UNWRAP) == c.CKF_UNWRAP,
-            .derive = (flags & c.CKF_DERIVE) == c.CKF_DERIVE,
+            .hardware = (flags & C.CKF_HW) == C.CKF_HW,
+            .encrypt = (flags & C.CKF_ENCRYPT) == C.CKF_ENCRYPT,
+            .decrypt = (flags & C.CKF_DECRYPT) == C.CKF_DECRYPT,
+            .digest = (flags & C.CKF_DIGEST) == C.CKF_DIGEST,
+            .sign = (flags & C.CKF_SIGN) == C.CKF_SIGN,
+            .sign_with_recovery = (flags & C.CKF_SIGN_RECOVER) == C.CKF_SIGN_RECOVER,
+            .verify = (flags & C.CKF_VERIFY) == C.CKF_VERIFY,
+            .verify_with_recovery = (flags & C.CKF_VERIFY_RECOVER) == C.CKF_VERIFY_RECOVER,
+            .generate = (flags & C.CKF_GENERATE) == C.CKF_GENERATE,
+            .generate_key_pair = (flags & C.CKF_GENERATE_KEY_PAIR) == C.CKF_GENERATE_KEY_PAIR,
+            .wrap = (flags & C.CKF_WRAP) == C.CKF_WRAP,
+            .unwrap = (flags & C.CKF_UNWRAP) == C.CKF_UNWRAP,
+            .derive = (flags & C.CKF_DERIVE) == C.CKF_DERIVE,
             .ec = MechanismECFlags.fromCType(flags),
-            .extension = (flags & c.CKF_EXTENSION) == c.CKF_EXTENSION,
+            .extension = (flags & C.CKF_EXTENSION) == C.CKF_EXTENSION,
         };
     }
 };
@@ -225,14 +225,14 @@ pub const MechanismECFlags = struct {
     uncompress: bool = false,
     compress: bool = false,
 
-    fn fromCType(flags: c.CK_FLAGS) MechanismECFlags {
+    fn fromCType(flags: C.CK_FLAGS) MechanismECFlags {
         return .{
-            .f_p = (flags & c.CKF_EC_F_P) == c.CKF_EC_F_P,
-            .f_2m = (flags & c.CKF_EC_F_2M) == c.CKF_EC_F_2M,
-            .parameters = (flags & c.CKF_EC_ECPARAMETERS) == c.CKF_EC_ECPARAMETERS,
-            .named_curve = (flags & c.CKF_EC_NAMEDCURVE) == c.CKF_EC_NAMEDCURVE,
-            .uncompress = (flags & c.CKF_EC_UNCOMPRESS) == c.CKF_EC_UNCOMPRESS,
-            .compress = (flags & c.CKF_EC_COMPRESS) == c.CKF_EC_COMPRESS,
+            .f_p = (flags & C.CKF_EC_F_P) == C.CKF_EC_F_P,
+            .f_2m = (flags & C.CKF_EC_F_2M) == C.CKF_EC_F_2M,
+            .parameters = (flags & C.CKF_EC_ECPARAMETERS) == C.CKF_EC_ECPARAMETERS,
+            .named_curve = (flags & C.CKF_EC_NAMEDCURVE) == C.CKF_EC_NAMEDCURVE,
+            .uncompress = (flags & C.CKF_EC_UNCOMPRESS) == C.CKF_EC_UNCOMPRESS,
+            .compress = (flags & C.CKF_EC_COMPRESS) == C.CKF_EC_COMPRESS,
         };
     }
 };
@@ -250,7 +250,7 @@ pub const Module = struct {
         errdefer alloc.destroy(context);
         context.lib = lib;
 
-        const getFunctionList = lib.lookup(c.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
+        const getFunctionList = lib.lookup(C.CK_C_GetFunctionList, "C_GetFunctionList").?.?;
         const rv = getFunctionList(@ptrCast(&context.sym));
         try helpers.returnIfError(rv);
 
@@ -265,20 +265,20 @@ pub const Module = struct {
     }
 
     pub fn initialize(self: Module) Error!void {
-        var args: c.CK_C_INITIALIZE_ARGS = .{ .flags = c.CKF_OS_LOCKING_OK };
+        var args: C.CK_C_INITIALIZE_ARGS = .{ .flags = C.CKF_OS_LOCKING_OK };
         const rv = self.ctx.sym.C_Initialize.?(&args);
         try helpers.returnIfError(rv);
     }
 
     pub fn finalize(self: Module) Error!void {
-        const args: c.CK_VOID_PTR = null;
+        const args: C.CK_VOID_PTR = null;
         const rv = self.ctx.sym.C_Finalize.?(args);
         try helpers.returnIfError(rv);
     }
 
     /// Caller owns returned memory.
     pub fn getInfo(self: Module) Error!Info {
-        var info: c.CK_INFO = undefined;
+        var info: C.CK_INFO = undefined;
         const rv = self.ctx.sym.C_GetInfo.?(&info);
         try helpers.returnIfError(rv);
 
@@ -287,13 +287,13 @@ pub const Module = struct {
 
     /// Caller owns returned memory.
     pub fn getSlotList(self: Module, token_present: bool) Error![]c_ulong {
-        const present: c.CK_BBOOL = if (token_present) c.CK_TRUE else c.CK_FALSE;
-        var slot_count: c.CK_ULONG = undefined;
+        const present: C.CK_BBOOL = if (token_present) C.CK_TRUE else C.CK_FALSE;
+        var slot_count: C.CK_ULONG = undefined;
 
         var rv = self.ctx.sym.C_GetSlotList.?(present, null, &slot_count);
         try helpers.returnIfError(rv);
 
-        const slot_list = try self.allocator.alloc(c.CK_ULONG, slot_count);
+        const slot_list = try self.allocator.alloc(C.CK_ULONG, slot_count);
         errdefer self.allocator.free(slot_list);
 
         rv = self.ctx.sym.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
@@ -303,7 +303,7 @@ pub const Module = struct {
     }
 
     pub fn getSlotInfo(self: Module, slot_id: c_ulong) Error!SlotInfo {
-        var slot_info: c.CK_SLOT_INFO = undefined;
+        var slot_info: C.CK_SLOT_INFO = undefined;
         const rv = self.ctx.sym.C_GetSlotInfo.?(slot_id, &slot_info);
         try helpers.returnIfError(rv);
 
@@ -311,7 +311,7 @@ pub const Module = struct {
     }
 
     pub fn getTokenInfo(self: Module, slot_id: c_ulong) Error!TokenInfo {
-        var token_info: c.CK_TOKEN_INFO = undefined;
+        var token_info: C.CK_TOKEN_INFO = undefined;
         const rv = self.ctx.sym.C_GetTokenInfo.?(slot_id, &token_info);
         try helpers.returnIfError(rv);
 
@@ -320,7 +320,7 @@ pub const Module = struct {
 
     /// Caller owns returned memory.
     pub fn getMechanismList(self: Module, slot_id: c_ulong) Error![]MechanismType {
-        var mech_count: c.CK_ULONG = undefined;
+        var mech_count: C.CK_ULONG = undefined;
 
         var rv = self.ctx.sym.C_GetMechanismList.?(slot_id, null, &mech_count);
         try helpers.returnIfError(rv);
@@ -335,7 +335,7 @@ pub const Module = struct {
     }
 
     pub fn getMechanismInfo(self: Module, slot_id: c_ulong, mech_type: MechanismType) Error!MechanismInfo {
-        var mech_info: c.CK_MECHANISM_INFO = undefined;
+        var mech_info: C.CK_MECHANISM_INFO = undefined;
         const rv = self.ctx.sym.C_GetMechanismInfo.?(slot_id, @intFromEnum(mech_type), &mech_info);
         try helpers.returnIfError(rv);
 
@@ -361,13 +361,13 @@ pub const Module = struct {
     pub fn openSession(self: Module, slot_id: c_ulong, flags: SessionFlags) Error!Session {
         var packed_flags: c_ulong = 0;
         if (flags.read_write) {
-            packed_flags = packed_flags | c.CKF_RW_SESSION;
+            packed_flags = packed_flags | C.CKF_RW_SESSION;
         }
         if (flags.serial) {
-            packed_flags = packed_flags | c.CKF_SERIAL_SESSION;
+            packed_flags = packed_flags | C.CKF_SERIAL_SESSION;
         }
 
-        const handle = try self.allocator.create(c.CK_SESSION_HANDLE);
+        const handle = try self.allocator.create(C.CK_SESSION_HANDLE);
         errdefer self.allocator.destroy(handle);
 
         // We're *NOT* supporting Notify/Callback setups here on purpose.
