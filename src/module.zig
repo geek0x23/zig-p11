@@ -242,7 +242,6 @@ pub const Module = struct {
     allocator: Allocator,
 
     /// Caller must deinit() to close the library and free memory.
-    /// Opens the given PKCS#11 library and loads symbols from it.
     pub fn init(alloc: Allocator, path: []const u8) !Module {
         var lib = try std.DynLib.open(path);
 
@@ -257,7 +256,6 @@ pub const Module = struct {
         return .{ .allocator = alloc, .ctx = context };
     }
 
-    /// Closes the PKCS#11 library and frees memory.
     pub fn deinit(self: *Module) void {
         self.ctx.lib.close();
         self.allocator.destroy(self.ctx);
@@ -276,7 +274,6 @@ pub const Module = struct {
         try helpers.returnIfError(rv);
     }
 
-    /// Caller owns returned memory.
     pub fn getInfo(self: Module) Error!Info {
         var info: C.CK_INFO = undefined;
         const rv = self.ctx.sym.C_GetInfo.?(&info);
@@ -286,15 +283,15 @@ pub const Module = struct {
     }
 
     /// Caller owns returned memory.
-    pub fn getSlotList(self: Module, token_present: bool) Error![]c_ulong {
+    pub fn getSlotList(self: Module, alloc: Allocator, token_present: bool) Error![]c_ulong {
         const present: C.CK_BBOOL = if (token_present) C.CK_TRUE else C.CK_FALSE;
         var slot_count: C.CK_ULONG = undefined;
 
         var rv = self.ctx.sym.C_GetSlotList.?(present, null, &slot_count);
         try helpers.returnIfError(rv);
 
-        const slot_list = try self.allocator.alloc(C.CK_ULONG, slot_count);
-        errdefer self.allocator.free(slot_list);
+        const slot_list = try alloc.alloc(C.CK_ULONG, slot_count);
+        errdefer alloc.free(slot_list);
 
         rv = self.ctx.sym.C_GetSlotList.?(present, slot_list.ptr, &slot_count);
         try helpers.returnIfError(rv);
@@ -319,14 +316,14 @@ pub const Module = struct {
     }
 
     /// Caller owns returned memory.
-    pub fn getMechanismList(self: Module, slot_id: c_ulong) Error![]MechanismType {
+    pub fn getMechanismList(self: Module, alloc: Allocator, slot_id: c_ulong) Error![]MechanismType {
         var mech_count: C.CK_ULONG = undefined;
 
         var rv = self.ctx.sym.C_GetMechanismList.?(slot_id, null, &mech_count);
         try helpers.returnIfError(rv);
 
-        const mech_list = try self.allocator.alloc(MechanismType, mech_count);
-        errdefer self.allocator.free(mech_list);
+        const mech_list = try alloc.alloc(MechanismType, mech_count);
+        errdefer alloc.free(mech_list);
 
         rv = self.ctx.sym.C_GetMechanismList.?(slot_id, @ptrCast(mech_list.ptr), &mech_count);
         try helpers.returnIfError(rv);
@@ -368,18 +365,13 @@ pub const Module = struct {
             c_flags = c_flags | C.CKF_SERIAL_SESSION;
         }
 
-        const handle = try self.allocator.create(C.CK_SESSION_HANDLE);
-        errdefer self.allocator.destroy(handle);
+        var handle: C.CK_SESSION_HANDLE = 0;
 
         // We're *NOT* supporting Notify/Callback setups here on purpose.
-        const rv = self.ctx.sym.C_OpenSession.?(slot_id, c_flags, null, null, handle);
+        const rv = self.ctx.sym.C_OpenSession.?(slot_id, c_flags, null, null, &handle);
         try helpers.returnIfError(rv);
 
-        return .{
-            .handle = handle,
-            .allocator = self.allocator,
-            .ctx = self.ctx,
-        };
+        return .{ .handle = handle, .ctx = self.ctx };
     }
 
     pub fn closeAllSessions(self: Module, slot_id: c_ulong) Error!void {

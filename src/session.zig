@@ -39,38 +39,37 @@ pub const SessionFlags = struct {
 };
 
 pub const Session = struct {
-    handle: *C.CK_SESSION_HANDLE,
+    handle: C.CK_SESSION_HANDLE,
     ctx: *Context,
-    allocator: Allocator,
 
     pub fn close(self: *Session) Error!void {
-        const rv = self.ctx.sym.C_CloseSession.?(self.handle.*);
+        const rv = self.ctx.sym.C_CloseSession.?(self.handle);
         try helpers.returnIfError(rv);
     }
 
-    pub fn deinit(self: *Session) void {
-        self.allocator.destroy(self.handle);
-        self.* = undefined;
+    pub fn initPIN(self: Session, pin: []const u8) Error!void {
+        const rv = self.ctx.sym.C_InitPIN.?(self.handle, @constCast(pin.ptr), pin.len);
+        try helpers.returnIfError(rv);
     }
 
-    pub fn initPIN(self: Session, pin: []const u8) Error!void {
-        const rv = self.ctx.sym.C_InitPIN.?(self.handle.*, @constCast(pin.ptr), pin.len);
+    pub fn setPIN(self: Session, old_pin: []const u8, new_pin: []const u8) Error!void {
+        const rv = self.ctx.sym.C_SetPIN.?(self.handle, @constCast(old_pin.ptr), old_pin.len, @constCast(new_pin.ptr), new_pin.len);
         try helpers.returnIfError(rv);
     }
 
     pub fn login(self: Session, user_type: UserType, pin: []const u8) Error!void {
-        const rv = self.ctx.sym.C_Login.?(self.handle.*, @intFromEnum(user_type), @constCast(pin.ptr), pin.len);
+        const rv = self.ctx.sym.C_Login.?(self.handle, @intFromEnum(user_type), @constCast(pin.ptr), pin.len);
         try helpers.returnIfError(rv);
     }
 
     pub fn logout(self: Session) Error!void {
-        const rv = self.ctx.sym.C_Logout.?(self.handle.*);
+        const rv = self.ctx.sym.C_Logout.?(self.handle);
         try helpers.returnIfError(rv);
     }
 
     pub fn getSessionInfo(self: Session) Error!SessionInfo {
         var info: C.CK_SESSION_INFO = undefined;
-        const rv = self.ctx.sym.C_GetSessionInfo.?(self.handle.*, &info);
+        const rv = self.ctx.sym.C_GetSessionInfo.?(self.handle, &info);
         try helpers.returnIfError(rv);
 
         return SessionInfo.fromCType(info);

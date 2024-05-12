@@ -24,7 +24,7 @@ test "it can get all the infos" {
     try mod.initialize();
     defer mod.finalize() catch {};
 
-    const slots = try mod.getSlotList(true);
+    const slots = try mod.getSlotList(alloc, true);
     defer alloc.free(slots);
     try testing.expect(slots.len > 0);
     const slot = slots[0];
@@ -39,7 +39,7 @@ test "it can get all the infos" {
     const token_info = try mod.getTokenInfo(slot);
     try testing.expectStringStartsWith(&token_info.manufacturer_id, "SoftHSM");
 
-    const mechs = try mod.getMechanismList(slot);
+    const mechs = try mod.getMechanismList(alloc, slot);
     defer alloc.free(mechs);
     try testing.expect(mechs.len > 0);
 
@@ -53,7 +53,6 @@ test "it can get all the infos" {
     try testing.expect(mech_info.flags.ec.uncompress);
 
     var sess = try mod.openSession(slot, .{});
-    defer sess.deinit();
     const sess_info = try sess.getSessionInfo();
     try testing.expect(sess_info.state == p11.SessionState.read_write_public);
     try testing.expect(sess_info.flags.read_write);
@@ -68,7 +67,7 @@ test "it can initialize a new token" {
     try mod.initialize();
     defer mod.finalize() catch {};
 
-    const slots = try mod.getSlotList(true);
+    const slots = try mod.getSlotList(alloc, true);
     defer alloc.free(slots);
 
     // In SoftHSM, you init new tokens using the last slot.
@@ -77,11 +76,15 @@ test "it can initialize a new token" {
     try mod.initToken(slot, "1234", "zig-p11");
 
     var sess = try mod.openSession(slot, .{});
-    defer sess.deinit();
+    defer sess.close() catch {};
 
     try sess.login(p11.UserType.system_operator, "1234");
     try sess.initPIN("4321");
     try sess.logout();
+    try sess.login(p11.UserType.user, "4321");
+    try sess.setPIN("4321", "1234");
+    try sess.logout();
+    try sess.login(p11.UserType.user, "1234");
 }
 
 test "it can open and close a session" {
@@ -90,15 +93,13 @@ test "it can open and close a session" {
     try mod.initialize();
     defer mod.finalize() catch {};
 
-    const slots = try mod.getSlotList(true);
+    const slots = try mod.getSlotList(alloc, true);
     defer alloc.free(slots);
 
     const slot = slots[1];
     var sess = try mod.openSession(slot, .{});
-    defer sess.deinit();
     try sess.close();
 
-    var sess2 = try mod.openSession(slot, .{});
-    defer sess2.deinit();
+    _ = try mod.openSession(slot, .{});
     try mod.closeAllSessions(slot);
 }
