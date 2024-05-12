@@ -21,5 +21,6 @@ pub const Version = module.Version;
 pub const Session = session.Session;
 pub const SessionFlags = session.SessionFlags;
 pub const SessionInfo = session.SessionInfo;
+pub const Object = session.Object;
 
 pub const init = Module.init;

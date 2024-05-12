@@ -6,8 +6,8 @@ const constants = @import("constants.zig");
 const helpers = @import("helpers.zig");
 const session = @import("session.zig");
 
-const C = pkcs11.C;
 const Allocator = std.mem.Allocator;
+const C = pkcs11.C;
 const Context = pkcs11.Context;
 const Error = constants.Error;
 const MechanismType = constants.MechanismType;

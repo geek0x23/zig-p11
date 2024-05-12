@@ -61,7 +61,7 @@ test "it can get all the infos" {
     try testing.expect(sess_info.device_error == 0);
 }
 
-test "it can initialize a new token" {
+test "it can initialize a new token and set user PIN." {
     var mod = try p11.init(alloc, config.module);
     defer mod.deinit();
     try mod.initialize();
@@ -81,6 +81,7 @@ test "it can initialize a new token" {
     try sess.login(p11.UserType.system_operator, "1234");
     try sess.initPIN("4321");
     try sess.logout();
+
     try sess.login(p11.UserType.user, "4321");
     try sess.setPIN("4321", "1234");
     try sess.logout();
@@ -103,3 +104,45 @@ test "it can open and close a session" {
     _ = try mod.openSession(slot, .{});
     try mod.closeAllSessions(slot);
 }
+
+const TestSession = struct {
+    mod: p11.Module,
+    sess: p11.Session,
+    slots: []c_ulong,
+
+    pub fn init() !TestSession {
+        const mod = try p11.init(alloc, config.module);
+        try mod.initialize();
+
+        const slots = try mod.getSlotList(alloc, true);
+        const slot = slots[1];
+
+        const sess = try mod.openSession(slot, .{});
+
+        return .{ .mod = mod, .sess = sess, .slots = slots };
+    }
+
+    pub fn authenticated() !TestSession {
+        const ts = try TestSession.init();
+        try ts.sess.login(p11.UserType.user, "1234");
+        return ts;
+    }
+
+    pub fn deinit(self: *TestSession) void {
+        alloc.free(self.slots);
+        self.mod.deinit();
+    }
+};
+
+// TODO: find a token that works with state management so I can test this.
+// test "it can do session state management" {
+//     var ts = try TestSession.init();
+//     defer ts.deinit();
+
+//     const state = try ts.sess.getOperationState(alloc);
+//     defer alloc.free(state);
+
+//     try ts.sess.setOperationState(state, null, null);
+
+//     try testing.expect(state.len > 0);
+// }

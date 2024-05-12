@@ -10,6 +10,8 @@ const Error = constants.Error;
 const SessionState = constants.SessionState;
 const UserType = constants.UserType;
 
+pub const Object = struct { handle: c_ulong };
+
 pub const SessionInfo = struct {
     slot_id: c_ulong,
     state: SessionState,
@@ -73,5 +75,35 @@ pub const Session = struct {
         try helpers.returnIfError(rv);
 
         return SessionInfo.fromCType(info);
+    }
+
+    /// Caller owns returned memory.
+    pub fn getOperationState(self: Session, allocator: Allocator) Error![]u8 {
+        var state_len: C.CK_ULONG = 0;
+        var rv = self.ctx.sym.C_GetOperationState.?(self.handle, null, &state_len);
+        try helpers.returnIfError(rv);
+
+        const state = try allocator.alloc(u8, state_len);
+        errdefer allocator.free(state);
+
+        rv = self.ctx.sym.C_GetOperationState.?(self.handle, state.ptr, &state_len);
+        try helpers.returnIfError(rv);
+
+        return state;
+    }
+
+    pub fn setOperationState(self: Session, state: []u8, enc_key: ?Object, auth_key: ?Object) Error!void {
+        var c_enc_key: c_ulong = 0;
+        if (enc_key) |key| {
+            c_enc_key = key.handle;
+        }
+
+        var c_auth_key: c_ulong = 0;
+        if (auth_key) |key| {
+            c_auth_key = key.handle;
+        }
+
+        const rv = self.ctx.sym.C_SetOperationState.?(self.handle, state.ptr, state.len, c_enc_key, c_auth_key);
+        try helpers.returnIfError(rv);
     }
 };

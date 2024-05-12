@@ -38,6 +38,6 @@ zig build test -Dpkcs11-module=/path/to/your/module
 SoftHSM sends all logs to syslog.  The following rsyslog config file can help when debugging:
 
 ```
-:programname, isequal, "p11"
+:programname, isequal, "p11-tests"
 *.* /var/log/zig-p11
 ```

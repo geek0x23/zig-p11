@@ -12,4 +12,5 @@ rm -rf "${DIR}/tokens"
 mkdir -p "${DIR}/tokens"
 softhsm2-util --init-token --slot 0 --label "zig-p11" --pin 1234 --so-pin 1234 > /dev/null
 
-zig build test --summary all
+zig build
+zig-out/bin/p11-tests
