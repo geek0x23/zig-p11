@@ -138,9 +138,11 @@ const TestSession = struct {
     }
 };
 
-// TODO: find a token that works with state management so I can test this.
+// TODO: Find a token that works with state management so I can test this.
+//       Right now, SoftHSM simply returns CKR_FUNCTION_NOT_SUPPORTED.
+
 // test "it can do session state management" {
-//     var ts = try TestSession.init();
+//     var ts = try TestSession.authenticated();
 //     defer ts.deinit();
 
 //     const state = try ts.sess.getOperationState(alloc);

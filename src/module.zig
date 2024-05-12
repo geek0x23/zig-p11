@@ -156,7 +156,6 @@ pub const TokenFlags = struct {
             .so_pin_final_try = (flags & C.CKF_SO_PIN_FINAL_TRY) == C.CKF_SO_PIN_FINAL_TRY,
             .so_pin_locked = (flags & C.CKF_SO_PIN_LOCKED) == C.CKF_SO_PIN_LOCKED,
             .so_pin_to_be_changed = (flags & C.CKF_SO_PIN_TO_BE_CHANGED) == C.CKF_SO_PIN_TO_BE_CHANGED,
-            .error_state = (flags & C.CKF_ERROR_STATE) == C.CKF_ERROR_STATE,
         };
     }
 };
@@ -215,8 +214,6 @@ pub const MechanismFlags = struct {
 
 pub const MechanismECFlags = struct {
     f_p: bool = false,
-    f_2m: bool = false,
-    parameters: bool = false,
     named_curve: bool = false,
     uncompress: bool = false,
     compress: bool = false,
@@ -224,8 +221,6 @@ pub const MechanismECFlags = struct {
     fn fromCType(flags: C.CK_FLAGS) MechanismECFlags {
         return .{
             .f_p = (flags & C.CKF_EC_F_P) == C.CKF_EC_F_P,
-            .f_2m = (flags & C.CKF_EC_F_2M) == C.CKF_EC_F_2M,
-            .parameters = (flags & C.CKF_EC_ECPARAMETERS) == C.CKF_EC_ECPARAMETERS,
             .named_curve = (flags & C.CKF_EC_NAMEDCURVE) == C.CKF_EC_NAMEDCURVE,
             .uncompress = (flags & C.CKF_EC_UNCOMPRESS) == C.CKF_EC_UNCOMPRESS,
             .compress = (flags & C.CKF_EC_COMPRESS) == C.CKF_EC_COMPRESS,
@@ -237,7 +232,7 @@ pub const MechanismType = enum(c_ulong) {
     rsa_pkcs_key_pair_gen = C.CKM_RSA_PKCS_KEY_PAIR_GEN,
     rsa_pkcs = C.CKM_RSA_PKCS,
     rsa_9796 = C.CKM_RSA_9796,
-    rsa_x509 = C.CKM_RSA_X_509,
+    rsa_x_509 = C.CKM_RSA_X_509,
     md2_rsa_pkcs = C.CKM_MD2_RSA_PKCS,
     md5_rsa_pkcs = C.CKM_MD5_RSA_PKCS,
     sha1_rsa_pkcs = C.CKM_SHA1_RSA_PKCS,
@@ -268,8 +263,6 @@ pub const MechanismType = enum(c_ulong) {
     sha256_rsa_pkcs_pss = C.CKM_SHA256_RSA_PKCS_PSS,
     sha384_rsa_pkcs_pss = C.CKM_SHA384_RSA_PKCS_PSS,
     sha512_rsa_pkcs_pss = C.CKM_SHA512_RSA_PKCS_PSS,
-    sha224_rsa_pkcs = C.CKM_SHA224_RSA_PKCS,
-    sha224_rsa_pkcs_pss = C.CKM_SHA224_RSA_PKCS_PSS,
     sha512_224 = C.CKM_SHA512_224,
     sha512_224_hmac = C.CKM_SHA512_224_HMAC,
     sha512_224_hmac_general = C.CKM_SHA512_224_HMAC_GENERAL,
@@ -333,9 +326,6 @@ pub const MechanismType = enum(c_ulong) {
     sha256 = C.CKM_SHA256,
     sha256_hmac = C.CKM_SHA256_HMAC,
     sha256_hmac_general = C.CKM_SHA256_HMAC_GENERAL,
-    sha224 = C.CKM_SHA224,
-    sha224_hmac = C.CKM_SHA224_HMAC,
-    sha224_hmac_general = C.CKM_SHA224_HMAC_GENERAL,
     sha384 = C.CKM_SHA384,
     sha384_hmac = C.CKM_SHA384_HMAC,
     sha384_hmac_general = C.CKM_SHA384_HMAC_GENERAL,
@@ -360,7 +350,7 @@ pub const MechanismType = enum(c_ulong) {
     cast3_mac = C.CKM_CAST3_MAC,
     cast3_mac_general = C.CKM_CAST3_MAC_GENERAL,
     cast3_cbc_pad = C.CKM_CAST3_CBC_PAD,
-    // CAST5 mechanisms omitted intentionally, since CAST-128 is the same thing.
+    // removed CAST5 mechanisms since CAST5 == CAST-128 and values collided.
     cast128_key_gen = C.CKM_CAST128_KEY_GEN,
     cast128_ecb = C.CKM_CAST128_ECB,
     cast128_cbc = C.CKM_CAST128_CBC,
@@ -402,12 +392,11 @@ pub const MechanismType = enum(c_ulong) {
     sha256_key_derivation = C.CKM_SHA256_KEY_DERIVATION,
     sha384_key_derivation = C.CKM_SHA384_KEY_DERIVATION,
     sha512_key_derivation = C.CKM_SHA512_KEY_DERIVATION,
-    sha224_key_derivation = C.CKM_SHA224_KEY_DERIVATION,
     pbe_md2_des_cbc = C.CKM_PBE_MD2_DES_CBC,
     pbe_md5_des_cbc = C.CKM_PBE_MD5_DES_CBC,
     pbe_md5_cast_cbc = C.CKM_PBE_MD5_CAST_CBC,
     pbe_md5_cast3_cbc = C.CKM_PBE_MD5_CAST3_CBC,
-    // CAST5 mechanisms omitted intentionally, since CAST-128 is the same thing.
+    // again removing CAST5, see above.
     pbe_md5_cast128_cbc = C.CKM_PBE_MD5_CAST128_CBC,
     pbe_sha1_cast128_cbc = C.CKM_PBE_SHA1_CAST128_CBC,
     pbe_sha1_rc4_128 = C.CKM_PBE_SHA1_RC4_128,
@@ -440,15 +429,6 @@ pub const MechanismType = enum(c_ulong) {
     kip_derive = C.CKM_KIP_DERIVE,
     kip_wrap = C.CKM_KIP_WRAP,
     kip_mac = C.CKM_KIP_MAC,
-    camellia_key_gen = C.CKM_CAMELLIA_KEY_GEN,
-    camellia_ecb = C.CKM_CAMELLIA_ECB,
-    camellia_cbc = C.CKM_CAMELLIA_CBC,
-    camellia_mac = C.CKM_CAMELLIA_MAC,
-    camellia_mac_general = C.CKM_CAMELLIA_MAC_GENERAL,
-    camellia_cbc_pad = C.CKM_CAMELLIA_CBC_PAD,
-    camellia_ecb_encrypt_data = C.CKM_CAMELLIA_ECB_ENCRYPT_DATA,
-    camellia_cbc_encrypt_data = C.CKM_CAMELLIA_CBC_ENCRYPT_DATA,
-    camellia_ctr = C.CKM_CAMELLIA_CTR,
     aria_key_gen = C.CKM_ARIA_KEY_GEN,
     aria_ecb = C.CKM_ARIA_ECB,
     aria_cbc = C.CKM_ARIA_CBC,
@@ -478,7 +458,6 @@ pub const MechanismType = enum(c_ulong) {
     skipjack_relayx = C.CKM_SKIPJACK_RELAYX,
     kea_key_pair_gen = C.CKM_KEA_KEY_PAIR_GEN,
     kea_key_derive = C.CKM_KEA_KEY_DERIVE,
-    kea_derive = C.CKM_KEA_DERIVE,
     fortezza_timestamp = C.CKM_FORTEZZA_TIMESTAMP,
     baton_key_gen = C.CKM_BATON_KEY_GEN,
     baton_ecb128 = C.CKM_BATON_ECB128,
@@ -487,7 +466,7 @@ pub const MechanismType = enum(c_ulong) {
     baton_counter = C.CKM_BATON_COUNTER,
     baton_shuffle = C.CKM_BATON_SHUFFLE,
     baton_wrap = C.CKM_BATON_WRAP,
-    // ommited ecdsa_key_pair_gen (deprecated name conflicts with ec_key_pair_gen)
+    // remove ECDSA_KEY_PAIR_GEN because it's deprecated and collides with EC_KEY_PAIR_GEN.
     ec_key_pair_gen = C.CKM_EC_KEY_PAIR_GEN,
     ecdsa = C.CKM_ECDSA,
     ecdsa_sha1 = C.CKM_ECDSA_SHA1,
@@ -546,6 +525,10 @@ pub const MechanismType = enum(c_ulong) {
     gost28147 = C.CKM_GOST28147,
     gost28147_mac = C.CKM_GOST28147_MAC,
     gost28147_key_wrap = C.CKM_GOST28147_KEY_WRAP,
+    chacha20_key_gen = C.CKM_CHACHA20_KEY_GEN,
+    chacha20 = C.CKM_CHACHA20,
+    poly1305_key_gen = C.CKM_POLY1305_KEY_GEN,
+    poly1305 = C.CKM_POLY1305,
     dsa_parameter_gen = C.CKM_DSA_PARAMETER_GEN,
     dh_pkcs_parameter_gen = C.CKM_DH_PKCS_PARAMETER_GEN,
     x9_42_dh_parameter_gen = C.CKM_X9_42_DH_PARAMETER_GEN,
@@ -556,13 +539,31 @@ pub const MechanismType = enum(c_ulong) {
     aes_cfb8 = C.CKM_AES_CFB8,
     aes_cfb128 = C.CKM_AES_CFB128,
     aes_cfb1 = C.CKM_AES_CFB1,
+    vendor_defined = C.CKM_VENDOR_DEFINED,
+    sha224 = C.CKM_SHA224,
+    sha224_hmac = C.CKM_SHA224_HMAC,
+    sha224_hmac_general = C.CKM_SHA224_HMAC_GENERAL,
+    sha224_rsa_pkcs = C.CKM_SHA224_RSA_PKCS,
+    sha224_rsa_pkcs_pss = C.CKM_SHA224_RSA_PKCS_PSS,
+    sha224_key_derivation = C.CKM_SHA224_KEY_DERIVATION,
+    camellia_key_gen = C.CKM_CAMELLIA_KEY_GEN,
+    camellia_ecb = C.CKM_CAMELLIA_ECB,
+    camellia_cbc = C.CKM_CAMELLIA_CBC,
+    camellia_mac = C.CKM_CAMELLIA_MAC,
+    camellia_mac_general = C.CKM_CAMELLIA_MAC_GENERAL,
+    camellia_cbc_pad = C.CKM_CAMELLIA_CBC_PAD,
+    camellia_ecb_encrypt_data = C.CKM_CAMELLIA_ECB_ENCRYPT_DATA,
+    camellia_cbc_encrypt_data = C.CKM_CAMELLIA_CBC_ENCRYPT_DATA,
+    camellia_ctr = C.CKM_CAMELLIA_CTR,
     aes_key_wrap = C.CKM_AES_KEY_WRAP,
     aes_key_wrap_pad = C.CKM_AES_KEY_WRAP_PAD,
     rsa_pkcs_tpm_1_1 = C.CKM_RSA_PKCS_TPM_1_1,
     rsa_pkcs_oaep_tpm_1_1 = C.CKM_RSA_PKCS_OAEP_TPM_1_1,
-    // Some implementations of PKCS#11 back-ported v3 mechanisms to v2.40.... so we do the same to avoid panics.
-    ec_edwards_key_pair_gen = 0x00001055,
-    eddsa = 0x00001057,
+    // backported PKCS#11 3.0 mechanisms.
+    ec_edwards_key_pair_gen = C.CKM_EC_EDWARDS_KEY_PAIR_GEN,
+    ec_montgomery_key_pair_gen = C.CKM_EC_MONTGOMERY_KEY_PAIR_GEN,
+    eddsa = C.CKM_EDDSA,
+    xeddsa = C.CKM_XEDDSA,
 };
 
 pub const Module = struct {

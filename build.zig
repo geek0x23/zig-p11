@@ -5,8 +5,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // Dependencies
-    const pkcs11_headers = b.dependency("pkcs11", .{});
-    const pkcs11_header_path = pkcs11_headers.path("published/2-40-errata-1");
+    const pkcs11 = b.dependency("pkcs11", .{}).path("common");
 
     // Options
     const module = b.option([]const u8, "pkcs11-module", "Executes tests against the given library.") orelse "/lib64/softhsm/libsofthsm.so";
@@ -19,7 +18,7 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
-    p11.addIncludePath(pkcs11_header_path);
+    p11.addIncludePath(pkcs11);
     p11.addIncludePath(b.path("include"));
 
     // Tests

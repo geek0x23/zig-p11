@@ -3,8 +3,8 @@
     .version = "0.0.1",
     .dependencies = .{
         .pkcs11 = .{
-            .url = "https://github.com/oasis-tcs/pkcs11/archive/refs/tags/2-40-errata-1.tar.gz",
-            .hash = "12208f8169d4e3c53bf3c00452cbdfddaad270c75e0bbcdd5038a18198868fcd1dca",
+            .url = "https://github.com/p11-glue/p11-kit/releases/download/0.25.3/p11-kit-0.25.3.tar.xz",
+            .hash = "1220d1b9391da8a94444adaa7933744724d34170331f1ea09193eaf08a442eeb82eb",
         },
     },
     .paths = .{

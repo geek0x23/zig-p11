@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub const C = @cImport({
-    @cInclude("cryptoki.h");
+    @cInclude("pkcs11.h");
 });
 
 pub const Context = struct {
