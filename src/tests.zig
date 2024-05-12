@@ -34,14 +34,13 @@ test "it can get all the infos" {
     const slot = slots[0];
 
     const slot_info = try mod.getSlotInfo(slot);
-    try testing.expectStringStartsWith(&slot_info.description, "SoftHSM");
     try testing.expect(slot_info.flags.token_present);
 
     const info = try mod.getInfo();
-    try testing.expectStringStartsWith(&info.manufacturer_id, "SoftHSM");
+    try testing.expect(info.cryptoki_version.major >= 2);
 
     const token_info = try mod.getTokenInfo(slot);
-    try testing.expectStringStartsWith(&token_info.manufacturer_id, "SoftHSM");
+    try testing.expect(token_info.flags.token_initialized);
 
     const mechs = try mod.getMechanismList(alloc, slot);
     defer alloc.free(mechs);
@@ -110,25 +109,36 @@ test "it can open and close a session" {
 }
 
 const TestSession = struct {
-    mod: p11.Module,
-    sess: p11.Session,
+    mod: p11.module.Module,
+    sess: p11.session.Session,
     slots: []c_ulong,
 
     pub fn init() !TestSession {
-        const mod = try p11.init(alloc, config.module);
+        var mod = try p11.init(alloc, config.module);
+        errdefer mod.deinit();
         try mod.initialize();
 
         const slots = try mod.getSlotList(alloc, true);
+        errdefer alloc.free(slots);
         const slot = slots[1];
 
-        const sess = try mod.openSession(slot, .{});
+        var sess = try mod.openSession(slot, .{});
+        errdefer sess.close();
 
         return .{ .mod = mod, .sess = sess, .slots = slots };
     }
 
-    pub fn authenticated() !TestSession {
-        const ts = try TestSession.init();
-        try ts.sess.login(p11.UserType.user, "1234");
+    pub fn with_user_auth() !TestSession {
+        var ts = try TestSession.init();
+        errdefer ts.deinit();
+        try ts.sess.login(p11.session.UserType.user, "1234");
+        return ts;
+    }
+
+    pub fn with_so_auth() !TestSession {
+        var ts = try TestSession.init();
+        errdefer ts.deinit();
+        try ts.sess.login(p11.session.UserType.system_operator, "1234");
         return ts;
     }
 
@@ -142,7 +152,7 @@ const TestSession = struct {
 //       Right now, SoftHSM simply returns CKR_FUNCTION_NOT_SUPPORTED.
 
 // test "it can do session state management" {
-//     var ts = try TestSession.authenticated();
+//     var ts = try TestSession.with_user_auth();
 //     defer ts.deinit();
 
 //     const state = try ts.sess.getOperationState(alloc);

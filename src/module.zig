@@ -559,7 +559,7 @@ pub const MechanismType = enum(c_ulong) {
     aes_key_wrap_pad = C.CKM_AES_KEY_WRAP_PAD,
     rsa_pkcs_tpm_1_1 = C.CKM_RSA_PKCS_TPM_1_1,
     rsa_pkcs_oaep_tpm_1_1 = C.CKM_RSA_PKCS_OAEP_TPM_1_1,
-    // backported PKCS#11 3.0 mechanisms.
+    // backported PKCS#11 3.0 mechanisms from p11-kit
     ec_edwards_key_pair_gen = C.CKM_EC_EDWARDS_KEY_PAIR_GEN,
     ec_montgomery_key_pair_gen = C.CKM_EC_MONTGOMERY_KEY_PAIR_GEN,
     eddsa = C.CKM_EDDSA,

@@ -1,0 +1,3 @@
+module: /lib64/softhsm/libsofthsm.so
+critical: yes
+priority: 100

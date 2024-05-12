@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) void {
     const pkcs11 = b.dependency("pkcs11", .{}).path("common");
 
     // Options
-    const module = b.option([]const u8, "pkcs11-module", "Executes tests against the given library.") orelse "/lib64/softhsm/libsofthsm.so";
+    const module = b.option([]const u8, "pkcs11-module", "Executes tests against the given library.") orelse "/lib64/p11-kit-proxy.so";
     const options = b.addOptions();
     options.addOption([]const u8, "module", module);
 
