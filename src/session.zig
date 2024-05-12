@@ -1,14 +1,12 @@
 const std = @import("std");
-const constants = @import("constants.zig");
+const err = @import("err.zig");
 const helpers = @import("helpers.zig");
 const pkcs11 = @import("pkcs11.zig");
 
 const Allocator = std.mem.Allocator;
 const C = pkcs11.C;
 const Context = pkcs11.Context;
-const Error = constants.Error;
-const SessionState = constants.SessionState;
-const UserType = constants.UserType;
+const Error = err.Error;
 
 pub const Object = struct { handle: c_ulong };
 
@@ -38,6 +36,20 @@ pub const SessionFlags = struct {
             .serial = (flags & C.CKF_SERIAL_SESSION) == C.CKF_SERIAL_SESSION,
         };
     }
+};
+
+pub const UserType = enum(c_ulong) {
+    system_operator = C.CKU_SO,
+    user = C.CKU_USER,
+    context_specific = C.CKU_CONTEXT_SPECIFIC,
+};
+
+pub const SessionState = enum(c_ulong) {
+    read_only_public = C.CKS_RO_PUBLIC_SESSION,
+    read_only_user_functions = C.CKS_RO_USER_FUNCTIONS,
+    read_write_public = C.CKS_RW_PUBLIC_SESSION,
+    read_write_user_functions = C.CKS_RW_USER_FUNCTIONS,
+    read_write_system_operator_functions = C.CKS_RW_SO_FUNCTIONS,
 };
 
 pub const Session = struct {

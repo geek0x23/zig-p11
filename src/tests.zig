@@ -5,6 +5,10 @@ const std = @import("std");
 const testing = std.testing;
 const alloc = testing.allocator;
 
+const MechanismType = p11.module.MechanismType;
+const SessionState = p11.session.SessionState;
+const UserType = p11.session.UserType;
+
 test "it can load a PKCS#11 module." {
     var mod = try p11.init(alloc, config.module);
     defer mod.deinit();
@@ -43,18 +47,18 @@ test "it can get all the infos" {
     defer alloc.free(mechs);
     try testing.expect(mechs.len > 0);
 
-    var mech_info = try mod.getMechanismInfo(slot, p11.MechanismType.aes_cbc);
+    var mech_info = try mod.getMechanismInfo(slot, MechanismType.aes_cbc);
     try testing.expect(mech_info.flags.encrypt);
     try testing.expect(mech_info.flags.decrypt);
 
-    mech_info = try mod.getMechanismInfo(slot, p11.MechanismType.ec_key_pair_gen);
+    mech_info = try mod.getMechanismInfo(slot, MechanismType.ec_key_pair_gen);
     try testing.expect(mech_info.flags.generate_key_pair);
     try testing.expect(mech_info.flags.ec.named_curve);
     try testing.expect(mech_info.flags.ec.uncompress);
 
     var sess = try mod.openSession(slot, .{});
     const sess_info = try sess.getSessionInfo();
-    try testing.expect(sess_info.state == p11.SessionState.read_write_public);
+    try testing.expect(sess_info.state == SessionState.read_write_public);
     try testing.expect(sess_info.flags.read_write);
     try testing.expect(sess_info.flags.serial);
     try testing.expect(sess_info.slot_id == slot);
@@ -78,14 +82,14 @@ test "it can initialize a new token and set user PIN." {
     var sess = try mod.openSession(slot, .{});
     defer sess.close() catch {};
 
-    try sess.login(p11.UserType.system_operator, "1234");
+    try sess.login(UserType.system_operator, "1234");
     try sess.initPIN("4321");
     try sess.logout();
 
-    try sess.login(p11.UserType.user, "4321");
+    try sess.login(UserType.user, "4321");
     try sess.setPIN("4321", "1234");
     try sess.logout();
-    try sess.login(p11.UserType.user, "1234");
+    try sess.login(UserType.user, "1234");
 }
 
 test "it can open and close a session" {
