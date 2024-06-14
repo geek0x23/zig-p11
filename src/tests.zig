@@ -5,10 +5,6 @@ const std = @import("std");
 const testing = std.testing;
 const alloc = testing.allocator;
 
-const MechanismType = p11.module.MechanismType;
-const SessionState = p11.session.SessionState;
-const UserType = p11.session.UserType;
-
 test "it can load a PKCS#11 module." {
     var mod = try p11.init(alloc, config.module);
     defer mod.deinit();
@@ -46,18 +42,18 @@ test "it can get all the infos" {
     defer alloc.free(mechs);
     try testing.expect(mechs.len > 0);
 
-    var mech_info = try mod.getMechanismInfo(slot, MechanismType.aes_cbc);
+    var mech_info = try mod.getMechanismInfo(slot, .aes_cbc);
     try testing.expect(mech_info.flags.encrypt);
     try testing.expect(mech_info.flags.decrypt);
 
-    mech_info = try mod.getMechanismInfo(slot, MechanismType.ec_key_pair_gen);
+    mech_info = try mod.getMechanismInfo(slot, .ec_key_pair_gen);
     try testing.expect(mech_info.flags.generate_key_pair);
     try testing.expect(mech_info.flags.ec.named_curve);
     try testing.expect(mech_info.flags.ec.uncompress);
 
     var sess = try mod.openSession(slot, .{});
     const sess_info = try sess.getSessionInfo();
-    try testing.expect(sess_info.state == SessionState.read_write_public);
+    try testing.expect(sess_info.state == .read_write_public);
     try testing.expect(sess_info.flags.read_write);
     try testing.expect(sess_info.flags.serial);
     try testing.expect(sess_info.slot_id == slot);
@@ -81,14 +77,14 @@ test "it can initialize a new token and set user PIN." {
     var sess = try mod.openSession(slot, .{});
     defer sess.close() catch {};
 
-    try sess.login(UserType.system_operator, "1234");
+    try sess.login(.system_operator, "1234");
     try sess.initPIN("4321");
     try sess.logout();
 
-    try sess.login(UserType.user, "4321");
+    try sess.login(.user, "4321");
     try sess.setPIN("4321", "1234");
     try sess.logout();
-    try sess.login(UserType.user, "1234");
+    try sess.login(.user, "1234");
 }
 
 test "it can open and close a session" {
@@ -131,14 +127,14 @@ const TestSession = struct {
     pub fn with_user_auth() !TestSession {
         var ts = try TestSession.init();
         errdefer ts.deinit();
-        try ts.sess.login(p11.session.UserType.user, "1234");
+        try ts.sess.login(.user, "1234");
         return ts;
     }
 
     pub fn with_so_auth() !TestSession {
         var ts = try TestSession.init();
         errdefer ts.deinit();
-        try ts.sess.login(p11.session.UserType.system_operator, "1234");
+        try ts.sess.login(.system_operator, "1234");
         return ts;
     }
 
@@ -162,3 +158,24 @@ const TestSession = struct {
 
 //     try testing.expect(state.len > 0);
 // }
+
+test "it can import objects" {
+    var ts = try TestSession.with_user_auth();
+    defer ts.deinit();
+
+    const buff = [_]u8{1} ** 16;
+    const ObjectClass = p11.session.ObjectClass;
+    const Attribute = p11.session.Attribute;
+
+    var template = [_]p11.session.Attribute{
+        Attribute.new(.label, "test-create-object"),
+        Attribute.new(.token, false),
+        Attribute.new(.encrypt, true),
+        Attribute.new(.decrypt, true),
+        Attribute.new(.class, ObjectClass.secret_key),
+        Attribute.new(.value, &buff),
+    };
+
+    const obj = try ts.sess.createObject(&template);
+    try testing.expect(obj.handle > 0);
+}

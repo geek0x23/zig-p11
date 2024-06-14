@@ -4,40 +4,8 @@ This project is a Zig module for PKCS#11.  PKCS#11 is wrapped with a thin layer 
 
 For now this exists for me to play around and learn zig while doing something more productive than just a simple "Hello, World!" application.  Maybe someday this library will be usable, but probably not.
 
-## SoftHSM2
-
-First make a place for your config to live:
-
-```
-mkdir -p ~/.config/softhsm2
-```
-
-Create a file called `softhsm2.conf` in `~/.config/softhsm2` with the following contents:
-
-```
-directories.tokendir = /some/path/for/tokens
-objectstore.backend = file
-log.level = DEBUG
-slots.removable = false
-```
-
-Finally, initialize a new empty token:
-
-```
-softhsm2-util --init-token --slot 0 --label "zig-p11" --pin 1234 --so-pin 1234
-```
-
 ## Testing
 
-The unit tests will use the module path `/lib64/softhsm/libsofthsm.so` by default.  To run the unit tests with a different module path, specify the appropriate build option:
+When testing, the project will attempt load [p11-kit](https://github.com/p11-glue/p11-kit/) from `/lib64/p11-kit-proxy.so`.  This is because Zig's `std.DynLib.open` doesn't support searching system paths.
 
-```
-zig build test -Dpkcs11-module=/path/to/your/module
-```
-
-SoftHSM sends all logs to syslog.  The following rsyslog config file can help when debugging:
-
-```
-:programname, isequal, "p11-tests"
-*.* /var/log/zig-p11
-```
+I've shipped a script (`run-tests.sh`) which supports running tests against [NSS](https://firefox-source-docs.mozilla.org/security/nss/index.html) and [SoftHSM](https://github.com/opendnssec/SoftHSMv2).  This script will take over `~/.config/pkcs11` and `~/.config/softhsm2` and store specific configuration files there.

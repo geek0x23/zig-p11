@@ -1,5 +1,5 @@
 module: /lib64/libsoftokn3.so
-x-init-reserved: configdir='sql:./tokens'
+x-init-reserved: configdir='sql:tokens'
 critical: yes
 priority: 100
 log-calls: yes
